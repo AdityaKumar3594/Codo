@@ -3,68 +3,26 @@ import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
+import proxy from "express-http-proxy";
 
 dotenv.config();
 
+const port=process.env.PORT || 8000;
+
 const app = express();
-const PORT = process.env.PORT || 8000;
-
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || "http://localhost:5001";
-
-// Middleware
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || "http://localhost:3000",
-  credentials: true,
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
 }));
-app.use(morgan("dev"));
 app.use(cookieParser());
-app.use(express.json());
+app.use(morgan("dev"));
+app.use(express.json())
 
-// Generic forwarder to auth service
-const forwardToAuth = async (req, res) => {
-  try {
-    const url = `${AUTH_SERVICE_URL}${req.originalUrl}`;
+app.use("/api/auth",proxy(process.env.AUTH_SERVICE_URL))
+app.get('/',(req,res)=>{
+    res.json({"message":"Hello World from gateway"});
+})
 
-    const headers = { "Content-Type": "application/json" };
-    if (req.headers.authorization) headers["Authorization"] = req.headers.authorization;
-    if (req.headers.cookie) headers["Cookie"] = req.headers.cookie;
-
-    const fetchOptions = {
-      method: req.method,
-      headers,
-    };
-
-    if (["POST", "PUT", "PATCH"].includes(req.method)) {
-      fetchOptions.body = JSON.stringify(req.body);
-    }
-
-    const response = await fetch(url, fetchOptions);
-    const data = await response.json();
-
-    // Forward Set-Cookie headers from auth service
-    const setCookie = response.headers.get("set-cookie");
-    if (setCookie) res.setHeader("Set-Cookie", setCookie);
-
-    res.status(response.status).json(data);
-  } catch (error) {
-    console.error("Auth forward error:", error.message);
-    res.status(502).json({ success: false, message: "Auth service unavailable" });
-  }
-};
-
-// Route all /api/auth/* to auth service
-app.use("/api/auth", forwardToAuth);
-
-// Health check
-app.get("/health", (req, res) => {
-  res.status(200).json({ success: true, service: "gateway", status: "running" });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: "Route not found" });
-});
-
-app.listen(PORT, () => {
-  console.log(`Gateway running on port ${PORT}`);
-});
+app.listen(port, () => {
+    console.log(`Gateway running on port ${port}`);
+})
