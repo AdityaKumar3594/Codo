@@ -18,7 +18,17 @@ app.use(cookieParser());
 app.use(morgan("dev"));
 app.use(express.json())
 
-app.use("/api/auth",proxy(process.env.AUTH_SERVICE_URL))
+app.use("/api/auth", proxy(process.env.AUTH_SERVICE_URL, {
+    proxyReqBodyDecorator: (bodyContent) => bodyContent,
+    proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+        if (srcReq.body) {
+            const bodyData = JSON.stringify(srcReq.body);
+            proxyReqOpts.headers["Content-Type"] = "application/json";
+            proxyReqOpts.headers["Content-Length"] = Buffer.byteLength(bodyData);
+        }
+        return proxyReqOpts;
+    },
+}))
 app.get('/',(req,res)=>{
     res.json({"message":"Hello World from gateway"});
 })
