@@ -2,10 +2,13 @@ import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../../firebase";
 import { login } from "../features/login";
 import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { setUserData } from "../redux/userSlice";
 
 export default function Dashboard() {
 
     const [loading,setLoading]=useState(false)
+    const dispatch=useDispatch()
 
     const handleLogin = async () => {
 
@@ -14,6 +17,7 @@ export default function Dashboard() {
             const result = await signInWithPopup(auth, googleProvider);
             const token = await result.user.getIdToken();
             const data = await login(token);
+            dispatch(setUserData(data))
             setLoading(false)
             console.log(data);
         } catch (error) {
