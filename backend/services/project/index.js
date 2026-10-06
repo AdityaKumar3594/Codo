@@ -1,28 +1,23 @@
 import express from "express";
 import dotenv from "dotenv";
 import connectDB  from "./config/db.js";
-import router from "./routes/authRoutes.js";
+import router from "./routes/project.route.js";
 
-
-import cookieParser from "cookie-parser";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 8001;
+const PORT = process.env.PORT || 8002;
 
 app.use(express.json());
-app.use(cookieParser());
-
 app.use("/",router)
 
-
 app.get("/", (req, res) => {
-  res.json({message:"Auth service is running"} );
+  res.json({message:"Project service is running"} );
 });
 
 connectDB();
 
 app.listen(PORT, () => {  
-  console.log(`Auth service running on port ${PORT}`);
+  console.log(`Project service running on port ${PORT}`);
 });

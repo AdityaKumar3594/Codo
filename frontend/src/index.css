@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@keyframes wave {
+    0%, 100% { transform: rotate(0deg); }
+    20%, 60% { transform: rotate(14deg); }
+    40%, 80% { transform: rotate(-10deg); }
+}
+
+.animate-wave {
+    animation: wave 1.8s infinite ease-in-out;
+}

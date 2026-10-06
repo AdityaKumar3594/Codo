@@ -4,8 +4,9 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import proxy from "express-http-proxy";
-import { protect } from "./middleware/protect";
-import { getCurrentUser } from "./controllers/user.controller";
+import { protect } from "./middleware/protect.js";
+import { getCurrentUser } from "./controllers/user.controller.js";
+import { proxyWithHeader } from "./utils/proxyWithHeader.js";
 
 dotenv.config();
 
@@ -25,19 +26,9 @@ app.use(express.json());
 
 
 
-app.use("/api/auth", proxy(process.env.AUTH_SERVICE_URL, {
-    proxyReqBodyDecorator: (bodyContent) => bodyContent,
-    proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
-        if (srcReq.body) {
-            const bodyData = JSON.stringify(srcReq.body);
-            proxyReqOpts.headers["Content-Type"] = "application/json";
-            proxyReqOpts.headers["Content-Length"] = Buffer.byteLength(bodyData);
-        }
-        return proxyReqOpts;
-    },
-}))
-
-app.get("/me",protect,getCurrentUser)
+app.use("/api/auth", proxy(process.env.AUTH_SERVICE_URL))
+app.use("/api/project", protect, proxyWithHeader(process.env.PROJECT_SERVICE_URL))
+app.get("/api/me",protect,getCurrentUser)
 app.get('/',(req,res)=>{
     res.json({"message":"Hello World from gateway"});
 })
