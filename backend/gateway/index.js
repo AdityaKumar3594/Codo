@@ -28,6 +28,7 @@ app.use(express.json());
 
 app.use("/api/auth", proxy(process.env.AUTH_SERVICE_URL))
 app.use("/api/project", protect, proxyWithHeader(process.env.PROJECT_SERVICE_URL))
+app.use("/api/file", protect, proxyWithHeader(process.env.FILE_SERVICE_URL))
 app.get("/api/me",protect,getCurrentUser)
 app.get('/',(req,res)=>{
     res.json({"message":"Hello World from gateway"});
