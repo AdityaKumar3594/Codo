@@ -16,7 +16,8 @@ import FileRow from "./File";
 // ─── InlineInput ──────────────────────────────────────────────────────────────
 // Used for both "create" (blank) and "rename" (pre-filled) operations.
 function InlineInput({ defaultValue = "", placeholder = "", onConfirm, onCancel }) {
-    const ref = useRef(null);
+    const ref       = useRef(null);
+    const committed = useRef(false); // guard: Enter fires onKeyDown then onBlur — only run once
 
     useEffect(() => {
         if (!ref.current) return;
@@ -27,6 +28,8 @@ function InlineInput({ defaultValue = "", placeholder = "", onConfirm, onCancel 
     }, []);
 
     const commit = () => {
+        if (committed.current) return;
+        committed.current = true;
         const val = ref.current?.value?.trim();
         val ? onConfirm(val) : onCancel();
     };
@@ -41,7 +44,10 @@ function InlineInput({ defaultValue = "", placeholder = "", onConfirm, onCancel 
             onKeyDown={(e) => {
                 e.stopPropagation();
                 if (e.key === "Enter") commit();
-                if (e.key === "Escape") onCancel();
+                if (e.key === "Escape") {
+                    committed.current = true; // prevent onBlur from committing after cancel
+                    onCancel();
+                }
             }}
             className="w-full bg-[#1a1a2e] border border-blue-500/60 rounded px-1.5 py-0.5 text-xs text-white outline-none"
         />

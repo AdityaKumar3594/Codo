@@ -6,7 +6,8 @@ import { deleteFile, updateFile } from "../features/file";
 
 // ─── InlineInput ──────────────────────────────────────────────────────────────
 function InlineInput({ defaultValue = "", onConfirm, onCancel }) {
-    const ref = useRef(null);
+    const ref       = useRef(null);
+    const committed = useRef(false);
 
     useEffect(() => {
         if (!ref.current) return;
@@ -17,6 +18,8 @@ function InlineInput({ defaultValue = "", onConfirm, onCancel }) {
     }, []);
 
     const commit = () => {
+        if (committed.current) return;
+        committed.current = true;
         const val = ref.current?.value?.trim();
         val ? onConfirm(val) : onCancel();
     };
@@ -30,7 +33,10 @@ function InlineInput({ defaultValue = "", onConfirm, onCancel }) {
             onKeyDown={(e) => {
                 e.stopPropagation();
                 if (e.key === "Enter") commit();
-                if (e.key === "Escape") onCancel();
+                if (e.key === "Escape") {
+                    committed.current = true;
+                    onCancel();
+                }
             }}
             className="w-full bg-[#1a1a2e] border border-blue-500/60 rounded px-1.5 py-0.5 text-xs text-white outline-none"
         />
