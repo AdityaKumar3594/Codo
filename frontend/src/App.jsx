@@ -5,7 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import { useDispatch, useSelector } from "react-redux";
 import { setUserData } from "./redux/userSlice";
 import { me } from "./features/me";
-
+import ProjectPage from "./pages/ProjectPage";
 function App() {
     const dispatch=useDispatch()
     const { isDark } = useSelector((state) => state.theme)
@@ -26,6 +26,8 @@ function App() {
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={<Dashboard/>}/>
+                <Route path="/project/:id" element={<ProjectPage/>}/>
+                    
             </Routes>
         </BrowserRouter>
     );

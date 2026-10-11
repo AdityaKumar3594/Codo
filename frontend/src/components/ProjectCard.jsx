@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { HiOutlineStar, HiStar, HiOutlineTrash } from "react-icons/hi2";
+import { useNavigate } from "react-router-dom";
+import { setCurrentProject } from "../redux/projectSlice";
+import { useDispatch } from "react-redux";
 
 export default function ProjectCard({
     project,
@@ -11,6 +14,8 @@ export default function ProjectCard({
 }) {
     const [confirming, setConfirming] = useState(false);
     const [localDeleting, setLocalDeleting] = useState(false);
+    const navigate=useNavigate()
+    const dispatch = useDispatch();
 
     const handleConfirmDelete = async (e) => {
         e.stopPropagation();
@@ -41,6 +46,9 @@ export default function ProjectCard({
             className={`group relative flex flex-col justify-between p-5 rounded-2xl bg-white/70 dark:bg-[#111116] border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 transition-all shadow-sm min-h-[140px] ${
                 deletingState ? "pointer-events-none" : ""
             }`}
+
+            onClick={() => {
+                navigate(`/project/${project._id}`)}}
         >
             {/* Top row: Name & Star */}
             <div>

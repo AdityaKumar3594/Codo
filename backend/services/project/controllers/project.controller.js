@@ -81,6 +81,32 @@ export const getStarredProjects=async (req,res)=>{
     }
 }
 
+export const updateProject=async (req,res)=>{
+    try {
+        const userId=req.headers["x-user-id"];
+        if(!userId){
+            return res.status(401).json({message:"Unauthorized"});
+        }
+        const {id}=req.params;
+        const {name,description}=req.body;
+
+        const project=await Project.findOne({_id:id,owner:userId});
+        if(!project){
+            return res.status(404).json({message:"Project not found"});
+        }
+        if(name) project.name=name;
+        if(description!==undefined) project.description=description;
+        await project.save();
+
+        await redis.del(`projects-${userId}`);
+        await redis.del(`projects-starred-${userId}`);
+
+        return res.status(200).json(project);
+    } catch (error) {
+        return res.status(500).json({message:"Update project error"});
+    }
+}
+
 export const toggleStar =async (req,res)=>{
     try {
         const userId=req.headers["x-user-id"];

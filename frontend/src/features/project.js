@@ -35,7 +35,7 @@ export const deleteProject=async({id})=>{
 export const getProjectById=async({id})=>{
     try {
         const response=await api.get(`/api/project/${id}`);
-        return response.data;
+        return response.data.project;
     } catch (error) {
         console.log("Error in getProjectById:",error)
         return null;
@@ -48,6 +48,16 @@ export const getStarredProjects=async()=>{
         return response.data;
     } catch (error) {
         console.log("Error in getStarredProjects:",error)
+        return null;
+    }
+}
+
+export const updateProject=async({id, name, description})=>{
+    try {
+        const response=await api.patch(`/api/project/${id}`,{name,description});
+        return response.data;
+    } catch (error) {
+        console.log("Error in updateProject:",error)
         return null;
     }
 }

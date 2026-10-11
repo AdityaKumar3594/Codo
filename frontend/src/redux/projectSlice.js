@@ -41,6 +41,11 @@ const projectSlice = createSlice({
         setCurrentProject: (state, action) => {
             state.currentProject = action.payload;
         },
+        patchCurrentProject: (state, action) => {
+            if (state.currentProject) {
+                state.currentProject = { ...state.currentProject, ...action.payload };
+            }
+        },
         setProjectLoading: (state, action) => {
             state.loading = action.payload;
         },
@@ -70,6 +75,7 @@ export const {
     toggleStarProject,
     removeProject,
     setCurrentProject,
+    patchCurrentProject,
     setProjectLoading,
     setCreatingProject,
     setActionLoading,
