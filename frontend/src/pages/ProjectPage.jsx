@@ -8,6 +8,9 @@ import TopBar from "../components/TopBar.jsx";
 import ActivityBar from "../components/ActivityBar.jsx";
 import Explorer from "../components/Explorer.jsx";
 import Editor from "../components/Editor.jsx";
+import Preview from "../components/Preview.jsx";
+import BottomPanel from "../components/BottomPanel.jsx";
+import AIChat from "../components/AIChat.jsx";
 import { HiOutlineDocumentDuplicate } from "react-icons/hi2";
 import { PiRobotLight } from "react-icons/pi";
 import { LuSquareTerminal, LuCode } from "react-icons/lu";
@@ -25,24 +28,6 @@ const MOBILE_TABS = [
     { id: "ai",       icon: PiRobotLight,               label: "AI" },
     { id: "terminal", icon: LuSquareTerminal,           label: "Terminal" },
 ];
-
-// ─── placeholders ──────────────────────────────────────────────────────────────
-function AiPlaceholder() {
-    return (
-        <div className="flex flex-col flex-1 items-center justify-center text-gray-500 text-xs gap-2 bg-[#0a0a0c]">
-            <PiRobotLight className="w-8 h-8 text-gray-600" />
-            AI Chat coming soon
-        </div>
-    );
-}
-function TerminalPlaceholder() {
-    return (
-        <div className="flex flex-col flex-1 items-center justify-center text-gray-500 text-xs gap-2 bg-[#0a0a0c]">
-            <LuSquareTerminal className="w-8 h-8 text-gray-600" />
-            Terminal coming soon
-        </div>
-    );
-}
 
 // ─── mobile bottom tab bar ─────────────────────────────────────────────────────
 function MobileTabBar({ activePane, onSelect }) {
@@ -78,13 +63,25 @@ export default function ProjectPage() {
     const dispatch = useDispatch();
 
     // layout
-    const [view,        setView]        = useState("code");
-    const [activePanel, setActivePanel] = useState("explorer");
-    const [mobilePane,  setMobilePane]  = useState("explorer");
+    const [view,            setView]            = useState("code");
+    const [activePanel,     setActivePanel]     = useState("explorer");
+    const [mobilePane,      setMobilePane]      = useState("explorer");
+    const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
+    const [aiChatOpen,      setAiChatOpen]      = useState(false);
 
     // ── tab / open-files state (shared between Explorer + Editor) ─────────────
-    const [openTabs,   setOpenTabs]   = useState([]);  // array of file nodes
-    const [activeTab,  setActiveTab]  = useState(null); // currently visible file
+    const [openTabs,   setOpenTabs]   = useState([]);
+    const [activeTab,  setActiveTab]  = useState(null);
+
+    // ── tree + fileState for Preview ──────────────────────────────────────────
+    // fileState is useState (not a ref) so Preview re-renders on every keystroke
+    const [tree,      setTree]      = useState([]);
+    const [fileState, setFileState] = useState({});
+
+    // Stable callback passed to Editor — doesn't change between renders
+    const handleFileStateChange = useCallback((fs) => {
+        setFileState(fs);
+    }, []);
 
     // ── open a file (adds tab if not already open, makes it active) ───────────
     const handleFileClick = useCallback((file) => {
@@ -96,7 +93,8 @@ export default function ProjectPage() {
         setMobilePane("editor"); // auto-switch on mobile
     }, []);
 
-    // ── close a tab ───────────────────────────────────────────────────────────
+    // ── close a tab (from Explorer sidebar or Editor tab bar) ────────────────
+    // Also cleans fileState to prevent memory leak
     const handleTabClose = useCallback((fileId) => {
         setOpenTabs((prev) => {
             const idx  = prev.findIndex((t) => t._id === fileId);
@@ -107,13 +105,26 @@ export default function ProjectPage() {
             });
             return next;
         });
+        // Remove cached content for the closed file
+        setFileState((prev) => {
+            if (!prev[fileId]) return prev;
+            const copy = { ...prev };
+            delete copy[fileId];
+            return copy;
+        });
     }, []);
 
-    // ── project fetch ─────────────────────────────────────────────────────────
+    // ── project + tree fetch ──────────────────────────────────────────────────
     const handleGetProject = async () => {
         const data = await getProjectById({ id });
         dispatch(setCurrentProject(data));
     };
+
+    // Called by Explorer via onTreeChange prop when it refreshes
+    // Keeps ProjectPage.tree in sync for Preview without a separate fetch
+    const handleTreeChange = useCallback((freshTree) => {
+        if (Array.isArray(freshTree)) setTree(freshTree);
+    }, []);
 
     const handleRootRename = async (newName) => {
         await updateProject({ id, name: newName });
@@ -135,6 +146,7 @@ export default function ProjectPage() {
         activeTab,
         onTabActivate: setActiveTab,
         onTabClose:    handleTabClose,
+        onTreeChange:  handleTreeChange, // keeps ProjectPage.tree fresh for Preview
     };
 
     // ── shared editor props ───────────────────────────────────────────────────
@@ -145,11 +157,18 @@ export default function ProjectPage() {
         setActiveTab: (file) => {
             setActiveTab(file);
             if (!file) return;
-            // ensure it's in the open list (edge case: set from outside)
             setOpenTabs((prev) =>
                 prev.find((t) => t._id === file._id) ? prev : [...prev, file]
             );
         },
+        onFileStateChange: handleFileStateChange,
+    };
+
+    // ── preview props ─────────────────────────────────────────────────────────
+    const previewProps = {
+        tree,
+        fileState,
+        openTabs,
     };
 
     return (
@@ -162,51 +181,92 @@ export default function ProjectPage() {
             <TopBar activeView={view} setActiveView={setView} />
 
             {/* ── Desktop layout (md+) ─────────────────────────────────────── */}
-            <div className="hidden md:flex flex-1 overflow-hidden">
+            <div className="hidden md:flex flex-1 flex-col overflow-hidden">
+                {/* Main row: ActivityBar + side panel + editor/preview */}
+                <div className="flex flex-1 overflow-hidden">
                 <ActivityBar
                     items={ACTIVITY_ITEMS}
                     bottomItems={[]}
-                    activeItem={activePanel}
-                    onItemClick={(panelId) =>
-                        setActivePanel((prev) => (prev === panelId ? null : panelId))
-                    }
+                    activeItem={bottomPanelOpen ? "terminal" : aiChatOpen ? "ai" : activePanel}
+                    onItemClick={(panelId) => {
+                        if (panelId === "terminal") {
+                            setBottomPanelOpen((o) => !o);
+                            return;
+                        }
+                        if (panelId === "ai") {
+                            setAiChatOpen((o) => !o);
+                            return;
+                        }
+                        setActivePanel((prev) => (prev === panelId ? null : panelId));
+                    }}
                 />
 
-                {/* Side panel (Explorer / AI / Terminal) */}
+                {/* Side panel — Explorer only now */}
                 <AnimatePresence mode="wait">
                     {activePanel === "explorer" && (
                         <Explorer key="explorer" {...explorerProps} />
                     )}
-                    {activePanel === "ai" && (
-                        <motion.div
-                            key="ai"
-                            initial={{ opacity: 0, x: -8, width: 0 }}
-                            animate={{ opacity: 1, x: 0, width: 288 }}
-                            exit={{ opacity: 0, x: -8, width: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="flex flex-col border-r border-white/[0.06]"
-                            style={{ minWidth: 288, maxWidth: 288 }}
-                        >
-                            <AiPlaceholder />
-                        </motion.div>
-                    )}
-                    {activePanel === "terminal" && (
-                        <motion.div
-                            key="terminal"
-                            initial={{ opacity: 0, x: -8, width: 0 }}
-                            animate={{ opacity: 1, x: 0, width: 288 }}
-                            exit={{ opacity: 0, x: -8, width: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="flex flex-col border-r border-white/[0.06]"
-                            style={{ minWidth: 288, maxWidth: 288 }}
-                        >
-                            <TerminalPlaceholder />
-                        </motion.div>
-                    )}
                 </AnimatePresence>
 
-                {/* Monaco editor — always mounted on desktop */}
-                <Editor {...editorProps} />
+                {/* Editor / Preview + Terminal + AI Chat — right column */}
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Editor/Preview + Terminal — takes remaining space */}
+                    <div className="flex flex-1 flex-col overflow-hidden">
+                        <AnimatePresence mode="wait">
+                            {view === "code" ? (
+                                <motion.div
+                                    key="editor"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="flex flex-1 overflow-hidden"
+                                >
+                                    <Editor {...editorProps} />
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="preview"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="flex flex-1 overflow-hidden"
+                                >
+                                    <Preview {...previewProps} />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <BottomPanel
+                            open={bottomPanelOpen}
+                            onClose={() => setBottomPanelOpen(false)}
+                            projectId={id}
+                        />
+                    </div>
+
+                    {/* AI Chat sidebar — slides in from right, editor stays visible */}
+                    <AnimatePresence>
+                        {aiChatOpen && (
+                            <motion.div
+                                key="ai-sidebar"
+                                initial={{ width: 0, opacity: 0 }}
+                                animate={{ width: 340, opacity: 1 }}
+                                exit={{ width: 0, opacity: 0 }}
+                                transition={{ duration: 0.22, ease: "easeOut" }}
+                                className="flex flex-col shrink-0 overflow-hidden border-l border-white/[0.06]"
+                                style={{ width: 340 }}
+                            >
+                                <AIChat
+                                    onClose={() => setAiChatOpen(false)}
+                                    activeTab={activeTab}
+                                    fileState={fileState}
+                                />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+                </div> {/* end main row */}
             </div>
 
             {/* ── Mobile layout (<md) ──────────────────────────────────────── */}
@@ -238,13 +298,21 @@ export default function ProjectPage() {
                             </motion.div>
                         )}
                         {mobilePane === "ai" && (
-                            <motion.div key="ai" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-1">
-                                <AiPlaceholder />
+                            <motion.div key="ai" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-1 flex-col overflow-hidden">
+                                <AIChat
+                                    onClose={() => setMobilePane("editor")}
+                                    activeTab={activeTab}
+                                    fileState={fileState}
+                                />
                             </motion.div>
                         )}
                         {mobilePane === "terminal" && (
-                            <motion.div key="terminal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-1">
-                                <TerminalPlaceholder />
+                            <motion.div key="terminal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-1 flex-col overflow-hidden bg-[#111113]">
+                                <BottomPanel
+                                    open={true}
+                                    onClose={() => setMobilePane("editor")}
+                                    projectId={id}
+                                />
                             </motion.div>
                         )}
                     </AnimatePresence>

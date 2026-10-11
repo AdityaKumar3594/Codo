@@ -2,8 +2,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { HiOutlineStar, HiStar, HiOutlineTrash } from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
-import { setCurrentProject } from "../redux/projectSlice";
-import { useDispatch } from "react-redux";
 
 export default function ProjectCard({
     project,
@@ -14,8 +12,7 @@ export default function ProjectCard({
 }) {
     const [confirming, setConfirming] = useState(false);
     const [localDeleting, setLocalDeleting] = useState(false);
-    const navigate=useNavigate()
-    const dispatch = useDispatch();
+    const navigate = useNavigate();
 
     const handleConfirmDelete = async (e) => {
         e.stopPropagation();

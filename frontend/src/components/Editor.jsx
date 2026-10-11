@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import MonacoEditor from "@monaco-editor/react";
-import { HiOutlineXMark, HiOutlineCloudArrowUp } from "react-icons/hi2";
+import { HiOutlineXMark, HiOutlineCloudArrowUp, HiOutlineDocument } from "react-icons/hi2";
 import { getFileIcon } from "../utils/explorerUtils";
 import { getFile, updateFile } from "../features/file";
 
@@ -78,12 +78,16 @@ function Tab({ file, active, dirty, onActivate, onClose }) {
 //   activeTab     – the active file object (or null)
 //   setOpenTabs   – setter
 //   setActiveTab  – setter
-export default function Editor({ openTabs, activeTab, setOpenTabs, setActiveTab }) {
+export default function Editor({ openTabs, activeTab, setOpenTabs, setActiveTab, onFileStateChange }) {
     // per-file content cache: { [fileId]: { content, loading, dirty } }
     const [fileState, setFileState] = useState({});
-    const [saving, setSaving]       = useState(false);
-    const [justSaved, setJustSaved] = useState(false);
-    const editorRef = useRef(null);
+    const [saving, setSaving] = useState(false);
+
+    // Notify parent (ProjectPage) when fileState changes so Preview stays in sync.
+    // onFileStateChange is a stable arrow function defined once in ProjectPage.
+    useEffect(() => {
+        onFileStateChange?.(fileState);
+    }, [fileState, onFileStateChange]);
 
     // ── load file content when active tab changes ──────────────────────────
     useEffect(() => {
@@ -112,8 +116,6 @@ export default function Editor({ openTabs, activeTab, setOpenTabs, setActiveTab 
         await updateFile({ id, content: state.content });
         setFileState((prev) => ({ ...prev, [id]: { ...prev[id], dirty: false } }));
         setSaving(false);
-        setJustSaved(true);
-        setTimeout(() => setJustSaved(false), 1800);
     }, [activeTab, fileState]);
 
     useEffect(() => {
@@ -170,41 +172,25 @@ export default function Editor({ openTabs, activeTab, setOpenTabs, setActiveTab 
                         />
                     ))}
                 </AnimatePresence>
-
-                {/* Save status badge */}
-                <AnimatePresence>
-                    {(saving || justSaved) && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="ml-auto mr-3 shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-400 text-[10px] font-medium"
-                        >
-                            <HiOutlineCloudArrowUp className="w-3 h-3" />
-                            {saving ? "Saving…" : "Saved"}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </div>
 
-            {/* ── Active file breadcrumb ───────────────────────────────── */}
+            {/* ── Breadcrumb row: active filename + Save button ───────── */}
             {activeTab && (
-                <div className="flex items-center gap-1.5 px-4 py-1 border-b border-white/[0.04] bg-[#0f0f12] shrink-0">
+                <div className="flex items-center gap-2 px-3 py-1.5 border-b border-white/[0.04] bg-[#0d0d10] shrink-0">
                     {(() => {
                         const { icon: Icon, color } = getFileIcon(activeTab.name);
-                        return <Icon className={`w-3.5 h-3.5 ${color}`} />;
+                        return <Icon className={`w-3.5 h-3.5 shrink-0 ${color}`} />;
                     })()}
-                    <span className="text-[11px] text-gray-500">{activeTab.name}</span>
-                    {fileState[activeTab._id]?.dirty && (
-                        <span className="ml-1 text-[10px] text-blue-400 font-medium">● unsaved</span>
-                    )}
+                    <span className="text-xs text-gray-300 font-medium">{activeTab.name}</span>
+
+                    {/* Save button — always visible, disabled when clean */}
                     <button
                         onClick={handleSave}
                         disabled={!fileState[activeTab._id]?.dirty || saving}
-                        className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-600/80 hover:bg-blue-500 disabled:opacity-30 text-white text-[10px] font-medium transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500 hover:bg-blue-400 disabled:opacity-30 disabled:cursor-default text-white text-[11px] font-semibold transition-colors select-none"
                     >
-                        <HiOutlineCloudArrowUp className="w-3 h-3" />
-                        Save
+                        <HiOutlineCloudArrowUp className="w-3.5 h-3.5" />
+                        {saving ? "Saving…" : "Save"}
                     </button>
                 </div>
             )}
@@ -215,7 +201,7 @@ export default function Editor({ openTabs, activeTab, setOpenTabs, setActiveTab 
                     /* Empty state */
                     <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
                         <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
-                            <HiOutlineCloudArrowUp className="w-6 h-6 text-gray-600" />
+                            <HiOutlineDocument className="w-6 h-6 text-gray-600" />
                         </div>
                         <p className="text-xs text-gray-600">Open a file from the Explorer</p>
                     </div>
@@ -237,7 +223,6 @@ export default function Editor({ openTabs, activeTab, setOpenTabs, setActiveTab 
                         value={current?.content ?? ""}
                         theme="vs-dark"
                         onChange={handleChange}
-                        onMount={(editor) => { editorRef.current = editor; }}
                         options={{
                             fontSize: 13,
                             fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",

@@ -1,37 +1,11 @@
-import { useState } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { HiFolder } from "react-icons/hi2";
 import { HiOutlineCodeBracket, HiOutlineEye } from "react-icons/hi2";
 import { motion } from "motion/react";
 
-export default function TopBar({
-    activeView = "code",
-    setActiveView,
-    showPreview,
-    setShowPreview,
-}) {
+export default function TopBar({ activeView = "code", setActiveView }) {
     const { currentProject } = useSelector((state) => state.project);
-    const [internalView, setInternalView] = useState("code");
-
-    // Support both activeView/setActiveView and showPreview/setShowPreview props, or fallback to internal state
-    const currentView = setActiveView
-        ? activeView
-        : setShowPreview
-        ? showPreview
-            ? "preview"
-            : "code"
-        : internalView;
-
-    const handleViewChange = (view) => {
-        if (setActiveView) {
-            setActiveView(view);
-        } else if (setShowPreview) {
-            setShowPreview(view === "preview");
-        } else {
-            setInternalView(view);
-        }
-    };
 
     return (
         <header className="relative flex h-12 w-full items-center justify-between border-b border-black/[0.06] dark:border-white/[0.06] bg-white/80 dark:bg-[#0c0c0f]/90 px-4 backdrop-blur-xl z-40 transition-colors select-none">
@@ -54,15 +28,14 @@ export default function TopBar({
                 </div>
             </div>
 
-            {/* Right: Code & Show Preview Toggle */}
+            {/* Right: Code & Preview Toggle */}
             <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06]">
-                {/* Code View Toggle */}
                 <motion.button
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => handleViewChange("code")}
+                    onClick={() => setActiveView?.("code")}
                     title="Code View"
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                        currentView === "code"
+                        activeView === "code"
                             ? "bg-white dark:bg-white/[0.12] text-gray-900 dark:text-white shadow-sm"
                             : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                     }`}
@@ -71,13 +44,12 @@ export default function TopBar({
                     <span className="hidden sm:inline">Code</span>
                 </motion.button>
 
-                {/* Preview View Toggle */}
                 <motion.button
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => handleViewChange("preview")}
+                    onClick={() => setActiveView?.("preview")}
                     title="Preview View"
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                        currentView === "preview"
+                        activeView === "preview"
                             ? "bg-sky-500/15 text-sky-500 dark:text-sky-400 border border-sky-500/30 shadow-sm"
                             : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                     }`}

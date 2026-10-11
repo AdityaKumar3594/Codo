@@ -36,11 +36,11 @@ export const login =async (req,res)=>{
 
         //storing session in cookie
 
-        res.cookie("session",sessionId,{
-            httpOnly:true,
-            secure:false,
-            sameSite:"lax",
-            maxAge:7*24*60*60*1000
+        res.cookie("session", sessionId, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         })
 
         return res.status(200).json(user);
@@ -58,8 +58,8 @@ export const logout=async (req,res)=>{
         }
         res.clearCookie("session", {
             httpOnly: true,
-            secure: false,
-            sameSite: "lax"
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
         })
         return res.status(200).json({message: "Logged out successfully"})
     }catch(error){

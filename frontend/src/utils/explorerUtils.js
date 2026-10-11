@@ -1,13 +1,12 @@
 // ─── imports ──────────────────────────────────────────────────────────────────
-import { IoLogoJavascript, IoLogoReact, IoLogoCss3, IoLogoHtml5, IoLogoSass } from "react-icons/io5";
+import { IoLogoJavascript, IoLogoReact, IoLogoHtml5, IoLogoSass } from "react-icons/io5";
 import { SiTypescript, SiPrisma, SiGraphql, SiDocker, SiYaml, SiToml, SiRust, SiGo, SiKotlin, SiSwift, SiPhp, SiRuby, SiCplusplus, SiC } from "react-icons/si";
 import { BsFiletypeJson, BsFiletypePdf, BsFiletypeSvg, BsFiletypeXml, BsFiletypeSql } from "react-icons/bs";
 import { FaCss3, FaPython, FaJava, FaMarkdown, FaGitAlt, FaDatabase } from "react-icons/fa";
 import { AiOutlinePython } from "react-icons/ai";
 import { HiOutlineDocument } from "react-icons/hi2";
 import { VscTerminalBash } from "react-icons/vsc";
-import { LuFileText, LuImage, LuFileCode, LuFileJson } from "react-icons/lu";
-import { RxComponent1 } from "react-icons/rx";
+import { LuFileText, LuImage, LuFileJson } from "react-icons/lu";
 
 // ─── known full filenames (takes priority over extension) ─────────────────────
 const KNOWN_NAMES = {
