@@ -162,15 +162,26 @@ export const getTree = async (req, res) => {
         const userId = req.headers["x-user-id"]
         const { projectId } = req.params
 
+        if (!userId) {
+            return res.status(401).json({ message: "Unauthorized" })
+        }
+
         const files = await File.find({
             projectId,
             owner: userId,
             isDeleted: false,
-        }).sort({ type: -1, name: 1 }) // folders first (-1 on type: "folder" > "file"), then alpha
+        }).sort({ name: 1 })
 
-        const tree = buildTree(files)
+        const sorted = [...files].sort((a, b) => {
+            if (a.type !== b.type) return a.type === "folder" ? -1 : 1
+            return a.name.localeCompare(b.name)
+        })
+
+        const tree = buildTree(sorted)
         return res.status(200).json(tree)
     } catch (error) {
-        return res.status(500).json({ message: "Error getting tree" })
+        console.error("getTree error:", error.message, error.stack)
+        return res.status(500).json({ message: "Error getting tree", detail: error.message })
     }
 }
+

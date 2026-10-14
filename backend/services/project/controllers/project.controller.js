@@ -47,12 +47,13 @@ export const getProjectById = async (req, res) => {
         const project = await Project.findOne({ _id: id, owner: userId });
         if (!project) return res.status(404).json({ message: "Project not found" });
 
-        // Update lastOpenedAt without waiting — fire and forget
+        // Update lastOpenedAt without waiting â€” fire and forget
         project.updateOne({ lastOpenedAt: Date.now() }).exec();
 
         return res.status(200).json({ message: "Project fetched successfully", project });
     } catch (error) {
-        return res.status(500).json({ message: "Get project by id error" });
+        console.error("getProjectById error:", error.message, error.stack)
+        return res.status(500).json({ message: "Get project by id error", detail: error.message });
     }
 };
 
@@ -137,3 +138,4 @@ export const deleteProject = async (req, res) => {
         return res.status(500).json({ message: "Delete project error" });
     }
 };
+

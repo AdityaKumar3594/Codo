@@ -77,6 +77,7 @@ export default function ProjectPage() {
     // fileState is useState (not a ref) so Preview re-renders on every keystroke
     const [tree,      setTree]      = useState([]);
     const [fileState, setFileState] = useState({});
+    const [treeTick,  setTreeTick]  = useState(0);
 
     // Stable callback passed to Editor — doesn't change between renders
     const handleFileStateChange = useCallback((fs) => {
@@ -90,6 +91,7 @@ export default function ProjectPage() {
             return already ? prev : [...prev, file];
         });
         setActiveTab(file);
+        setView("code");          // always switch to code view when opening a file
         setMobilePane("editor"); // auto-switch on mobile
     }, []);
 
@@ -147,7 +149,28 @@ export default function ProjectPage() {
         onTabActivate: setActiveTab,
         onTabClose:    handleTabClose,
         onTreeChange:  handleTreeChange, // keeps ProjectPage.tree fresh for Preview
+        treeTick,
     };
+
+    const handleFileOp = useCallback((eventType, data) => {
+        if (eventType === "file_created" || eventType === "file_updated") {
+            const file = data?.file;
+            if (file?._id && file.content != null) {
+                setFileState((prev) => ({
+                    ...prev,
+                    [file._id]: { ...(prev[file._id] || {}), content: file.content },
+                }));
+            }
+        }
+        if (
+            eventType === "file_created" ||
+            eventType === "folder_created" ||
+            eventType === "file_updated" ||
+            eventType === "file_deleted"
+        ) {
+            setTreeTick((n) => n + 1);
+        }
+    }, []);
 
     // ── shared editor props ───────────────────────────────────────────────────
     const editorProps = {
@@ -258,9 +281,15 @@ export default function ProjectPage() {
                                 style={{ width: 340 }}
                             >
                                 <AIChat
+                                    projectId={id}
                                     onClose={() => setAiChatOpen(false)}
                                     activeTab={activeTab}
                                     fileState={fileState}
+                                    onFileOp={handleFileOp}
+                                    onFileClick={(file) => {
+                                        handleFileClick(file);
+                                        setView("code");
+                                    }}
                                 />
                             </motion.div>
                         )}
@@ -300,9 +329,15 @@ export default function ProjectPage() {
                         {mobilePane === "ai" && (
                             <motion.div key="ai" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-1 flex-col overflow-hidden">
                                 <AIChat
+                                    projectId={id}
                                     onClose={() => setMobilePane("editor")}
                                     activeTab={activeTab}
                                     fileState={fileState}
+                                    onFileOp={handleFileOp}
+                                    onFileClick={(file) => {
+                                        handleFileClick(file);
+                                        setMobilePane("editor");
+                                    }}
                                 />
                             </motion.div>
                         )}

@@ -6,7 +6,7 @@ export const createRootFolder = async ({ projectId, projectName }) => {
         const { data } = await api.post("/api/file/create-root-folder", { projectId, projectName });
         return data;
     } catch (error) {
-        console.error("createRootFolder:", error?.response?.data || error.message);
+        console.log("create Root Folder error ",error)
         return null;
     }
 };
@@ -17,7 +17,7 @@ export const createFolder = async ({ projectId, parentId, name }) => {
         const { data } = await api.post("/api/file/create-folder", { projectId, parentId, name });
         return data;
     } catch (error) {
-        console.error("createFolder:", error?.response?.data || error.message);
+        console.log("create Folder error ",error)
         return null;
     }
 };
@@ -28,7 +28,7 @@ export const createFile = async ({ projectId, parentId, name, content = "", lang
         const { data } = await api.post("/api/file/create-file", { projectId, parentId, name, content, language });
         return data;
     } catch (error) {
-        console.error("createFile:", error?.response?.data || error.message);
+        console.log("create file error ",error)
         return null;
     }
 };
@@ -39,7 +39,7 @@ export const updateFile = async ({ id, name, content }) => {
         const { data } = await api.post(`/api/file/update/${id}`, { name, content });
         return data;
     } catch (error) {
-        console.error("updateFile:", error?.response?.data || error.message);
+        console.log("update file error ",error)
         return null;
     }
 };
@@ -50,7 +50,7 @@ export const deleteFile = async ({ id }) => {
         const { data } = await api.delete(`/api/file/${id}`);
         return data;
     } catch (error) {
-        console.error("deleteFile:", error?.response?.data || error.message);
+        console.log("delete file error ",error)
         return null;
     }
 };
@@ -61,7 +61,7 @@ export const getFile = async ({ id }) => {
         const { data } = await api.get(`/api/file/${id}`);
         return data;
     } catch (error) {
-        console.error("getFile:", error?.response?.data || error.message);
+        console.log("get file error ",error)
         return null;
     }
 };
@@ -72,7 +72,7 @@ export const getTree = async ({ projectId }) => {
         const { data } = await api.get(`/api/file/tree/${projectId}`);
         return data; // bare array: [{ _id, name, type, children: [...] }]
     } catch (error) {
-        console.error("getTree:", error?.response?.data || error.message);
+        console.log("get Tree error ",error)
         return null;
     }
 };

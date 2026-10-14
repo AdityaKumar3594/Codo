@@ -2,9 +2,56 @@ import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { LuX, LuSendHorizontal } from "react-icons/lu";
 import { PiSparkle, PiRobotLight } from "react-icons/pi";
+import {
+    LuFilePlus2,
+    LuFilePen,
+    LuFileX2,
+    LuFolderPlus,
+    LuFolderTree,
+    LuFile,
+    LuWrench,
+} from "react-icons/lu";
+import { isFileOp, streamChat } from "../features/ai";
 
-// ─── Message bubble ───────────────────────────────────────────────────────────
-function Message({ msg }) {
+// ─── Tool badge metadata ───────────────────────────────────────────────────────
+const TOOL_META = {
+    file_created:   { icon: LuFilePlus2,  color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Created" },
+    file_updated:   { icon: LuFilePen,    color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20",     label: "Updated" },
+    file_deleted:   { icon: LuFileX2,     color: "text-red-400",     bg: "bg-red-500/10 border-red-500/20",         label: "Deleted" },
+    folder_created: { icon: LuFolderPlus, color: "text-sky-400",     bg: "bg-sky-500/10 border-sky-500/20",         label: "Folder"  },
+    tree_fetched:   { icon: LuFolderTree, color: "text-gray-400",    bg: "bg-white/[0.04] border-white/[0.08]",     label: "Read tree" },
+    file_fetched:   { icon: LuFile,       color: "text-gray-400",    bg: "bg-white/[0.04] border-white/[0.08]",     label: "Read file" },
+};
+
+function ToolBadge({ op, onFileClick }) {
+    const meta = TOOL_META[op.type] ?? {
+        icon: LuWrench,
+        color: "text-gray-400",
+        bg: "bg-white/[0.04] border-white/[0.08]",
+        label: op.type,
+    };
+    const Icon = meta.icon;
+    const name = op.name || meta.label;
+    const clickable = !!op.file && !!onFileClick;
+
+    return (
+        <motion.span
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.15 }}
+            onClick={clickable ? () => onFileClick(op.file) : undefined}
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-medium ${meta.color} ${meta.bg}
+                ${clickable ? "cursor-pointer hover:brightness-125 active:scale-95 transition-all" : "cursor-default"}`}
+            title={clickable ? `Open ${name}` : op.type}
+        >
+            <Icon className="w-2.5 h-2.5 shrink-0" />
+            <span className="truncate max-w-[120px]">{name}</span>
+        </motion.span>
+    );
+}
+
+// ─── Message ──────────────────────────────────────────────────────────────────
+function Message({ msg, onFileClick }) {
     const isUser = msg.role === "user";
     return (
         <motion.div
@@ -18,94 +65,261 @@ function Message({ msg }) {
                     <PiRobotLight className="w-3.5 h-3.5 text-violet-400" />
                 </div>
             )}
-            <div
-                className={`max-w-[82%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words
-                    ${isUser
-                        ? "bg-blue-600/80 text-white rounded-tr-sm"
-                        : "bg-white/[0.06] text-gray-200 rounded-tl-sm border border-white/[0.05]"
-                    }`}
-            >
-                {msg.text}
+            <div className={`max-w-[82%] flex flex-col gap-1.5`}>
+                <div
+                    className={`rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words
+                        ${isUser
+                            ? "bg-blue-600/80 text-white rounded-tr-sm"
+                            : "bg-white/[0.06] text-gray-200 rounded-tl-sm border border-white/[0.05]"
+                        }`}
+                >
+                    {msg.text}
+                </div>
+
+                {/* Tool operation badges */}
+                {!isUser && msg.ops?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 px-0.5">
+                        {msg.ops.map((op, i) => (
+                            <ToolBadge key={i} op={op} onFileClick={onFileClick} />
+                        ))}
+                    </div>
+                )}
             </div>
         </motion.div>
     );
 }
 
 // ─── Typing indicator ─────────────────────────────────────────────────────────
-function Typing() {
+function Typing({ label, toolName }) {
     return (
         <div className="flex gap-2">
             <div className="shrink-0 w-6 h-6 rounded-full bg-violet-600/30 border border-violet-500/30 flex items-center justify-center">
                 <PiRobotLight className="w-3.5 h-3.5 text-violet-400" />
             </div>
-            <div className="bg-white/[0.06] border border-white/[0.05] rounded-2xl rounded-tl-sm px-3 py-2.5 flex items-center gap-1">
-                {[0, 1, 2].map((i) => (
-                    <motion.span
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-gray-500"
-                        animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
-                        transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.18 }}
-                    />
-                ))}
+            <div className="bg-white/[0.06] border border-white/[0.05] rounded-2xl rounded-tl-sm px-3 py-2.5 flex flex-col gap-1.5">
+                <div className="flex items-center gap-1">
+                    {[0, 1, 2].map((i) => (
+                        <motion.span
+                            key={i}
+                            className="w-1.5 h-1.5 rounded-full bg-gray-500"
+                            animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+                            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.18 }}
+                        />
+                    ))}
+                </div>
+                {toolName ? (
+                    <ToolBadge op={{ type: toolName, name: toolName.replaceAll("_", " ") }} />
+                ) : label ? (
+                    <span className="text-[10px] text-gray-500">{label}</span>
+                ) : null}
             </div>
         </div>
     );
 }
 
-// ─── AIChat ───────────────────────────────────────────────────────────────────
-// Desktop: wrapped in AnimatePresence + motion.div for slide-in from right.
-// Mobile:  rendered directly inside a motion.div managed by ProjectPage.
-//
-// Props:
-//   open       – controls the AnimatePresence (desktop only)
-//   onClose    – called when × is clicked
-//   activeTab  – current open file node
-//   fileState  – { [fileId]: { content } } from Editor
-//   fullHeight – when true (mobile), fills parent without fixed width
-export default function AIChat({ onClose, activeTab, fileState = {} }) {
+// ─── Main component ───────────────────────────────────────────────────────────
+export default function AIChat({
+    projectId,
+    onClose,
+    activeTab,
+    fileState = {},
+    onFileOp,
+    onFileClick,
+}) {
     const [messages, setMessages] = useState([]);
-    const [input,    setInput]    = useState("");
-    const [typing,   setTyping]   = useState(false);
-    const [msgCounter, setMsgCounter] = useState(0); // stable key counter
+    const [input, setInput] = useState("");
+    const [typing, setTyping] = useState(false);
+    const [status, setStatus] = useState("");
+    const [activeTool, setActiveTool] = useState(""); // tool currently running
+    const [msgCounter, setMsgCounter] = useState(0);
     const bottomRef = useRef(null);
-    const inputRef  = useRef(null); // single ref for the textarea
+    const inputRef = useRef(null);
+    const abortRef = useRef(null);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, typing]);
+    }, [messages, typing, status]);
 
-    // Focus input on mount
     useEffect(() => {
         setTimeout(() => inputRef.current?.focus(), 150);
+        return () => abortRef.current?.abort();
     }, []);
+
+    // Helper: append an op badge to a specific assistant message
+    const appendOp = (msgId, op) => {
+        setMessages((prev) =>
+            prev.map((m) =>
+                m.id === msgId
+                    ? { ...m, ops: [...(m.ops ?? []), op] }
+                    : m
+            )
+        );
+    };
 
     const sendMessage = async () => {
         const text = input.trim();
         if (!text || typing) return;
+        if (!projectId) {
+            setMessages((prev) => [
+                ...prev,
+                { id: Date.now(), role: "assistant", text: "Missing projectId — cannot talk to AI.", ops: [] },
+            ]);
+            return;
+        }
 
         const userKey = msgCounter;
+        const assistantKey = userKey + 1;
         setMsgCounter((c) => c + 2);
+
+        const history = messages.map((msg) => ({
+            role: msg.role,
+            content: msg.text,
+        }));
+
         setMessages((prev) => [...prev, { id: userKey, role: "user", text }]);
         setInput("");
-        // reset textarea height
         if (inputRef.current) inputRef.current.style.height = "auto";
         setTyping(true);
+        setStatus("Thinking...");
+        setActiveTool("");
 
-        // Context: pass current file name + first 800 chars of content
         const fileContent = activeTab ? (fileState[activeTab._id]?.content ?? "") : "";
-        const ctx = activeTab
-            ? `File: ${activeTab.name}\n\n${fileContent.slice(0, 800)}`
-            : "";
+        const prompt = activeTab
+            ? `${text}\n\nCurrent file: ${activeTab.name}\n\n${fileContent.slice(0, 800)}`
+            : text;
 
-        // Simulated response — replace with real AI API call
-        await new Promise((r) => setTimeout(r, 800 + Math.random() * 700));
-        setTyping(false);
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
 
-        const reply = ctx
-            ? `I can see you're working on \`${activeTab.name}\`.\n\nThis is a placeholder — connect a real AI API (OpenAI, Gemini, etc.) to get actual code suggestions and modifications.`
-            : "I'm your AI coding assistant. Open a file in the editor and I can help you understand, modify, or generate code.";
+        let assistantText = "";
+        let sawFileOp = false;
 
-        setMessages((prev) => [...prev, { id: userKey + 1, role: "assistant", text: reply }]);
+        try {
+            await streamChat({
+                projectId,
+                message: prompt,
+                history,
+                signal: controller.signal,
+                onEvent: (eventType, data) => {
+                    if (eventType === "start") {
+                        setStatus("Thinking...");
+                        return;
+                    }
+
+                    if (eventType === "tool_start") {
+                        const name = data?.tool_name || "tool";
+                        setActiveTool(name);
+                        setStatus(`Running ${name}...`);
+                        return;
+                    }
+
+                    if (eventType === "message") {
+                        assistantText = data?.content || assistantText;
+                        setActiveTool("");
+                        setStatus("");
+                        setMessages((prev) => {
+                            const existing = prev.find((m) => m.id === assistantKey);
+                            const withoutDraft = prev.filter((m) => m.id !== assistantKey);
+                            return [
+                                ...withoutDraft,
+                                {
+                                    id: assistantKey,
+                                    role: "assistant",
+                                    text: assistantText,
+                                    ops: existing?.ops ?? [],
+                                },
+                            ];
+                        });
+                        return;
+                    }
+
+                    if (isFileOp(eventType)) {
+                        sawFileOp = true;
+                        setActiveTool("");
+                        setStatus("");
+
+                        // File object — only present for file ops (not folder/tree)
+                        const fileObj = data?.file ?? null;
+                        const fileName =
+                            fileObj?.name ||
+                            data?.folder?.name ||
+                            (eventType === "tree_fetched" ? "project tree" : null);
+
+                        // Upsert the assistant message and append the op badge
+                        setMessages((prev) => {
+                            const existing = prev.find((m) => m.id === assistantKey);
+                            const withoutDraft = prev.filter((m) => m.id !== assistantKey);
+                            // Attach file only for actual file ops so badge becomes clickable
+                            const newOp = {
+                                type: eventType,
+                                name: fileName,
+                                file: fileObj?.type === "file" ? fileObj : null,
+                            };
+                            return [
+                                ...withoutDraft,
+                                {
+                                    id: assistantKey,
+                                    role: "assistant",
+                                    text: existing?.text ?? "",
+                                    ops: [...(existing?.ops ?? []), newOp],
+                                },
+                            ];
+                        });
+
+                        onFileOp?.(eventType, data);
+                        return;
+                    }
+
+                    if (eventType === "error") {
+                        assistantText = data?.message || "AI request failed";
+                        setMessages((prev) => {
+                            const existing = prev.find((m) => m.id === assistantKey);
+                            const withoutDraft = prev.filter((m) => m.id !== assistantKey);
+                            return [
+                                ...withoutDraft,
+                                {
+                                    id: assistantKey,
+                                    role: "assistant",
+                                    text: assistantText,
+                                    ops: existing?.ops ?? [],
+                                },
+                            ];
+                        });
+                    }
+                },
+            });
+
+            if (!assistantText) {
+                setMessages((prev) => {
+                    if (prev.some((m) => m.id === assistantKey && m.text)) return prev;
+                    return prev.map((m) =>
+                        m.id === assistantKey
+                            ? { ...m, text: sawFileOp ? "Done." : "Done." }
+                            : m
+                    ).concat(
+                        prev.some((m) => m.id === assistantKey)
+                            ? []
+                            : [{ id: assistantKey, role: "assistant", text: sawFileOp ? "Done." : "Done.", ops: [] }]
+                    );
+                });
+            }
+        } catch (err) {
+            if (err && err.name === "AbortError") return;
+            const failText = (err && err.message) || "AI request failed";
+            setMessages((prev) => {
+                const existing = prev.find((m) => m.id === assistantKey);
+                const withoutDraft = prev.filter((m) => m.id !== assistantKey);
+                return [
+                    ...withoutDraft,
+                    { id: assistantKey, role: "assistant", text: failText, ops: existing?.ops ?? [] },
+                ];
+            });
+        } finally {
+            setTyping(false);
+            setStatus("");
+            setActiveTool("");
+        }
     };
 
     const handleKeyDown = (e) => {
@@ -115,10 +329,9 @@ export default function AIChat({ onClose, activeTab, fileState = {} }) {
         }
     };
 
-    const content = (
+    return (
         <div className="flex flex-col h-full w-full bg-[#0d0d10] overflow-hidden">
-
-            {/* ── Header ──────────────────────────────────────────────── */}
+            {/* ── Header ─────────────────────────────────────────────── */}
             <div className="flex h-10 shrink-0 items-center justify-between border-b border-white/[0.06] px-3">
                 <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-md bg-violet-600/30 border border-violet-500/20 flex items-center justify-center">
@@ -135,10 +348,9 @@ export default function AIChat({ onClose, activeTab, fileState = {} }) {
                 </button>
             </div>
 
-            {/* ── Messages ────────────────────────────────────────────── */}
+            {/* ── Messages ───────────────────────────────────────────── */}
             <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {messages.length === 0 && !typing ? (
-                    /* Empty state */
                     <div className="flex flex-1 h-full flex-col items-center justify-center gap-4 text-center select-none">
                         <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/20 flex items-center justify-center">
                             <PiSparkle className="w-6 h-6 text-violet-400" />
@@ -156,16 +368,16 @@ export default function AIChat({ onClose, activeTab, fileState = {} }) {
                     <>
                         <AnimatePresence initial={false}>
                             {messages.map((msg) => (
-                                <Message key={msg.id} msg={msg} />
+                                <Message key={msg.id} msg={msg} onFileClick={onFileClick} />
                             ))}
                         </AnimatePresence>
-                        {typing && <Typing />}
+                        {typing && <Typing label={status} toolName={activeTool} />}
                     </>
                 )}
                 <div ref={bottomRef} />
             </div>
 
-            {/* ── Input bar ───────────────────────────────────────────── */}
+            {/* ── Input ──────────────────────────────────────────────── */}
             <div className="shrink-0 border-t border-white/[0.08] bg-[#0a0a0d] px-3 py-2">
                 <div className="flex items-end gap-2">
                     <textarea
@@ -194,8 +406,4 @@ export default function AIChat({ onClose, activeTab, fileState = {} }) {
             </div>
         </div>
     );
-
-    // Parent (ProjectPage) owns the motion wrapper, sizing, and animation.
-    // AIChat just renders its content filling whatever space it's given.
-    return content;
 }

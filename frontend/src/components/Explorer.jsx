@@ -53,7 +53,7 @@ function OpenFiles({ openTabs, activeTab, onActivate, onClose }) {
     );
 }
 
-export default function Explorer({ projectId, onFileClick, activeFileId, onRootRename, fullWidth = false, openTabs = [], activeTab = null, onTabActivate, onTabClose, onTreeChange }) {
+export default function Explorer({ projectId, onFileClick, activeFileId, onRootRename, fullWidth = false, openTabs = [], activeTab = null, onTabActivate, onTabClose, onTreeChange, treeTick = 0 }) {
     const { currentProject } = useSelector((s) => s.project);
 
     const [tree, setTree]         = useState([]);
@@ -84,7 +84,7 @@ export default function Explorer({ projectId, onFileClick, activeFileId, onRootR
 
     useEffect(() => {
         loadTree();
-    }, [loadTree]);
+    }, [loadTree, treeTick]);
 
     const handleInitWorkspace = async () => {
         if (!projectId || !currentProject?.name) return;

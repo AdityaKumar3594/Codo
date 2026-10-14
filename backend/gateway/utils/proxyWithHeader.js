@@ -4,6 +4,7 @@ import proxy from "express-http-proxy";
 // We must re-serialize req.body so downstream services receive it correctly.
 export const proxyWithHeader = (serviceUrl) => {
     return proxy(serviceUrl, {
+        timeout: 0,
         // Re-attach the parsed body as a Buffer so the proxy can forward it
         proxyReqBodyDecorator: (bodyContent, srcReq) => {
             if (srcReq.body && Object.keys(srcReq.body).length > 0) {
