@@ -91,7 +91,6 @@ export default function ProjectPage() {
             return already ? prev : [...prev, file];
         });
         setActiveTab(file);
-        setView("code");          // always switch to code view when opening a file
         setMobilePane("editor"); // auto-switch on mobile
     }, []);
 
@@ -265,6 +264,7 @@ export default function ProjectPage() {
                             open={bottomPanelOpen}
                             onClose={() => setBottomPanelOpen(false)}
                             projectId={id}
+                            onTreeChange={() => setTreeTick((n) => n + 1)}
                         />
                     </div>
 
@@ -347,6 +347,7 @@ export default function ProjectPage() {
                                     open={true}
                                     onClose={() => setMobilePane("editor")}
                                     projectId={id}
+                                    onTreeChange={() => setTreeTick((n) => n + 1)}
                                 />
                             </motion.div>
                         )}
