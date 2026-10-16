@@ -26,11 +26,14 @@ export const login =async (req,res)=>{
         //storing session in redis
         const sessionId=crypto.randomUUID()
 
+        await redis.set(`user-session-${user?._id}`,sessionId,"EX",7*24*60*60)
+
         await redis.set(`session-${sessionId}`,JSON.stringify({
             name:user.name,
             _id:user._id,
             email:user.email,
-            avatar:user.avatar
+            avatar:user.avatar,
+            credits:user.credits
         }),
         "EX",7*24*60*60)
 
@@ -67,3 +70,81 @@ export const logout=async (req,res)=>{
         return res.status(500).json({message: `logout error ${error}`})
     }
 }
+
+export const deductCredits=async ((req,res)=>{
+    try{
+        const {userId,amount}=req.body;
+        if(!userId){
+            return res.status(401).json({message:"userId not found"});
+        }
+
+        const user=await User.findOneAndUpdate({_id:userId,credits:{$gte:amount}},{
+            $inc:{credits:-amount}
+        },{returnDocument:"after"}).select("credits")
+
+        if(!user){
+            return res.status(401).json({message:"Insufficient credits"})
+        }
+
+        const sessionId=await redis.get(`user-id-${userId}`)
+
+        await redis.set(`session-${sessionId}`,JSON.stringify({
+            name:user.name,
+            _id:user._id,
+            email:user.email,
+            avatar:user.avatar,
+            credits:user.credits
+        }),
+        "EX",7*24*60*60)
+
+        return res.status(200).json({credits:user.credits})
+
+
+
+
+    }catch(error){
+        console.log("deduct credits error:", error);
+        return res.status(500).json({message: `deduct credits error ${error}`})
+
+    }
+
+})
+export const addCredits=async ((req,res)=>{
+    try{
+        const {userId,amount}=req.body;
+        if(!userId){
+            return res.status(401).json({message:"userId not found"});
+        }
+
+        const user = await User.findById(userId)
+
+        if(!user){
+            return res.status(401).json({message:"Insufficient credits"})
+        }
+
+        user.credits=(user.credits||0)+amount
+
+        user.save()
+
+
+
+        const sessionId=await redis.get(`user-id-${userId}`)
+
+        await redis.set(`session-${sessionId}`,JSON.stringify({
+            name:user.name,
+            _id:user._id,
+            email:user.email,
+            avatar:user.avatar,
+            credits:user.credits
+        }),
+
+        "EX",7*24*60*60)
+
+        return res.status(200).json(user.credits)
+    }catch(error){
+        console.log("deduct credits error:", error);
+        return res.status(500).json({message: `deduct credits error ${error}`})
+
+    }
+
+})
