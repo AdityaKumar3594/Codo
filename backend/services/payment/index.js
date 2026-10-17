@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 dotenv.config();
 
@@ -9,11 +10,15 @@ const PORT = process.env.PORT || 8006;
 
 app.use(express.json());
 
+app.use("/", paymentRoutes);
+app.use("/api/payment", paymentRoutes);
+
 app.get("/", (req, res) => {
-  res.json({message:"payment service is running"} );
+  res.json({ message: "Payment service is running" });
 });
 
-app.listen(PORT, () => {  
-  connectDB()
-  console.log(`payment service running on port ${PORT}`);
+connectDB();
+
+app.listen(PORT, () => {
+  console.log(`Payment service running on port ${PORT}`);
 });

@@ -30,6 +30,8 @@ app.use("/api/auth",    proxy(process.env.AUTH_SERVICE_URL));
 app.use("/api/project", protect, proxyWithHeader(process.env.PROJECT_SERVICE_URL));
 app.use("/api/file",    protect, proxyWithHeader(process.env.FILE_SERVICE_URL));
 app.use("/api/ai",      protect, proxyWithHeader(process.env.AI_SERVICE_URL));
+app.use("/api/payment/webhook", proxy(process.env.PAYMENT_SERVICE_URL));
+app.use("/api/payment", protect, proxyWithHeader(process.env.PAYMENT_SERVICE_URL));
 app.get("/api/me",      protect, getCurrentUser);
 
 app.get("/", (req, res) => {

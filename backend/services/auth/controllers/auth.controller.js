@@ -119,12 +119,12 @@ export const addCredits=async ((req,res)=>{
         const user = await User.findById(userId)
 
         if(!user){
-            return res.status(401).json({message:"Insufficient credits"})
+            return res.status(404).json({message:"User not found"})
         }
 
         user.credits=(user.credits||0)+amount
 
-        user.save()
+        await user.save()
 
 
 

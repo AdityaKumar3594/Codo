@@ -5,6 +5,6 @@ const router = express.Router();
 
 router.post("/login", login);
 router.get("/logout", logout);
-router.get("/user/deduct-credits",deductCredits)
-router.get("/user/add-credits", addCredits)
+router.all("/user/deduct-credits", deductCredits);
+router.all("/user/add-credits", addCredits);
 export default router;
