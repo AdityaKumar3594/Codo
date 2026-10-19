@@ -57,12 +57,12 @@ export default function NewProjectModal({ isOpen, onClose, onCreate }) {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="relative w-full max-w-md rounded-2xl bg-white dark:bg-[#121218] border border-black/[0.08] dark:border-white/[0.08] p-6 shadow-2xl z-10"
+                        className="relative w-full max-w-md rounded-2xl bg-white dark:bg-[#121218] border border-black/[0.08] dark:border-white/[0.08] p-5 sm:p-6 shadow-2xl z-10 mx-4"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between mb-5">
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                                     Create New Project
                                 </h3>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -97,7 +97,7 @@ export default function NewProjectModal({ isOpen, onClose, onCreate }) {
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="e.g. My Nextjs App"
                                     autoFocus
-                                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white/20 transition-all placeholder:text-gray-400 disabled:opacity-60"
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-gray-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white/20 transition-all placeholder:text-gray-400 disabled:opacity-60"
                                 />
                             </div>
 
@@ -111,7 +111,7 @@ export default function NewProjectModal({ isOpen, onClose, onCreate }) {
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="Brief description of what you're building..."
                                     rows={3}
-                                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white/20 transition-all placeholder:text-gray-400 resize-none disabled:opacity-60"
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-gray-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white/20 transition-all placeholder:text-gray-400 resize-none disabled:opacity-60"
                                 />
                             </div>
 

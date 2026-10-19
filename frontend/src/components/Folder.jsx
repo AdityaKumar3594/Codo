@@ -8,6 +8,7 @@ import {
     HiOutlineTrash,
     HiOutlineDocumentPlus,
     HiFolderPlus,
+    HiOutlineEllipsisHorizontal,
 } from "react-icons/hi2";
 import { folderColor } from "../utils/explorerUtils";
 import { createFile, createFolder, deleteFile, updateFile } from "../features/file";
@@ -186,10 +187,12 @@ export default function Folder({ node, depth, projectId, onRefresh, onFileClick,
                     )}
                 </div>
 
-                {/* ── Hover action buttons ─────────────────────────────── */}
-                {hovered && !renaming && (
+                {/* ── Action buttons ─────────────────────────────── */}
+                {!renaming && (
                     <div
-                        className="flex items-center gap-0.5 ml-auto shrink-0"
+                        className={`flex items-center gap-0.5 ml-auto shrink-0 transition-opacity duration-150 ${
+                            hovered ? "opacity-100" : "opacity-0 md:opacity-0 group-hover:opacity-100 max-md:opacity-70"
+                        }`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button
@@ -205,6 +208,16 @@ export default function Folder({ node, depth, projectId, onRefresh, onFileClick,
                             className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/[0.1] transition-colors"
                         >
                             <HiFolderPlus className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            title="Folder options"
+                            onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setMenu({ x: Math.min(rect.left, window.innerWidth - 180), y: rect.bottom + 4 });
+                            }}
+                            className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/[0.1] transition-colors max-md:block md:hidden"
+                        >
+                            <HiOutlineEllipsisHorizontal className="w-3.5 h-3.5" />
                         </button>
                     </div>
                 )}

@@ -40,7 +40,7 @@ export default function ProjectCard({
             exit={{ opacity: 0, scale: 0.96 }}
             whileHover={deletingState ? {} : { y: -2 }}
             transition={{ duration: 0.2 }}
-            className={`group relative flex flex-col justify-between p-5 rounded-2xl bg-white/70 dark:bg-[#111116] border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 transition-all shadow-sm min-h-[140px] ${
+            className={`group relative flex flex-col justify-between p-4 sm:p-5 rounded-2xl bg-white/70 dark:bg-[#111116] border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 transition-all shadow-sm min-h-[130px] sm:min-h-[140px] ${
                 deletingState ? "pointer-events-none" : ""
             }`}
 
@@ -50,7 +50,7 @@ export default function ProjectCard({
             {/* Top row: Name & Star */}
             <div>
                 <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white leading-snug line-clamp-1">
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white leading-snug line-clamp-1">
                         {project.name}
                     </h3>
 
@@ -63,7 +63,7 @@ export default function ProjectCard({
                             }
                         }}
                         disabled={isStarring || deletingState}
-                        className="p-1 rounded-lg text-gray-400 hover:text-amber-400 transition-colors shrink-0 cursor-pointer disabled:opacity-50"
+                        className="p-1.5 sm:p-1 rounded-lg text-gray-400 hover:text-amber-400 transition-colors shrink-0 cursor-pointer disabled:opacity-50"
                         title={project.starred ? "Unstar project" : "Star project"}
                     >
                         {isStarring ? (

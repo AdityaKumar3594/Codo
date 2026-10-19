@@ -224,6 +224,7 @@ export default function Editor({ openTabs, activeTab, setOpenTabs, setActiveTab,
                         theme="vs-dark"
                         onChange={handleChange}
                         options={{
+                            automaticLayout: true,
                             fontSize: 13,
                             fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
                             fontLigatures: true,

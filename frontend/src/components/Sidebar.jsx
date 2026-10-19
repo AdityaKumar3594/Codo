@@ -1,9 +1,9 @@
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { HiOutlineFolder, HiOutlineStar, HiBolt } from "react-icons/hi2";
+import { HiOutlineFolder, HiOutlineStar, HiBolt, HiXMark } from "react-icons/hi2";
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, mobileOpen = false, onCloseMobile }) {
     const navigate = useNavigate();
     const { userData } = useSelector((state) => state.user);
 
@@ -20,10 +20,34 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         },
     ];
 
-    return (
-        <aside className="w-64 shrink-0 flex flex-col justify-between p-4 border-r border-black/[0.06] dark:border-white/[0.06] select-none">
+    const handleSelectTab = (id) => {
+        setActiveTab(id);
+        if (onCloseMobile) onCloseMobile();
+    };
+
+    const handleUpgrade = () => {
+        if (onCloseMobile) onCloseMobile();
+        navigate("/plans");
+    };
+
+    const content = (
+        <div className="flex flex-col justify-between h-full p-4 select-none">
             {/* Top Navigation */}
             <div className="flex flex-col gap-1.5">
+                {/* Mobile Drawer Header */}
+                <div className="flex items-center justify-between pb-3 mb-2 border-b border-black/[0.06] dark:border-white/[0.06] md:hidden">
+                    <span className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">
+                        Menu
+                    </span>
+                    <button
+                        onClick={onCloseMobile}
+                        className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+                        aria-label="Close menu"
+                    >
+                        <HiXMark className="w-5 h-5" />
+                    </button>
+                </div>
+
                 {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -32,7 +56,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                             key={item.id}
                             whileHover={{ x: 2 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => setActiveTab(item.id)}
+                            onClick={() => handleSelectTab(item.id)}
                             className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                                 isActive
                                     ? "bg-black/[0.06] text-gray-950 dark:bg-white/[0.08] dark:text-white"
@@ -71,7 +95,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                 </div>
 
                 <motion.button
-                    onClick={() => navigate("/plans")}
+                    onClick={handleUpgrade}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
                     className="mt-1 w-full bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors py-2.5 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
@@ -80,6 +104,43 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                     <span>Upgrade Now</span>
                 </motion.button>
             </motion.div>
-        </aside>
+        </div>
+    );
+
+    return (
+        <>
+            {/* Desktop persistent sidebar */}
+            <aside className="hidden md:flex w-64 shrink-0 flex-col justify-between border-r border-black/[0.06] dark:border-white/[0.06]">
+                {content}
+            </aside>
+
+            {/* Mobile Drawer */}
+            <AnimatePresence>
+                {mobileOpen && (
+                    <div className="fixed inset-0 z-50 md:hidden">
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={onCloseMobile}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                        />
+
+                        {/* Slide-out Panel */}
+                        <motion.div
+                            initial={{ x: "-100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "-100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            className="relative w-72 max-w-[85vw] h-full bg-slate-50 dark:bg-[#0d0d12] border-r border-black/[0.08] dark:border-white/[0.08] shadow-2xl z-10"
+                        >
+                            {content}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </>
     );
 }

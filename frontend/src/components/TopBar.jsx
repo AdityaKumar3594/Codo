@@ -9,21 +9,21 @@ export default function TopBar({ activeView = "code", setActiveView }) {
     const { userData } = useSelector((state) => state.user);
 
     return (
-        <header className="relative flex h-12 w-full items-center justify-between border-b border-black/[0.06] dark:border-white/[0.06] bg-white/80 dark:bg-[#0c0c0f]/90 px-4 backdrop-blur-xl z-40 transition-colors select-none">
+        <header className="relative flex h-12 w-full items-center justify-between border-b border-black/[0.06] dark:border-white/[0.06] bg-white/80 dark:bg-[#0c0c0f]/90 px-2.5 sm:px-4 backdrop-blur-xl z-40 transition-colors select-none gap-2">
             {/* Left: Codo brand + Divider + Folder Icon + Project Name */}
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
                 <Link
                     to="/"
-                    className="text-sm font-bold tracking-tight text-gray-950 dark:text-white hover:opacity-80 transition-opacity shrink-0"
+                    className="text-xs sm:text-sm font-bold tracking-tight text-gray-950 dark:text-white hover:opacity-80 transition-opacity shrink-0"
                 >
                     Codo
                 </Link>
 
-                <span className="text-gray-300 dark:text-white/20 select-none text-xs">/</span>
+                <span className="text-gray-300 dark:text-white/20 select-none text-xs shrink-0">/</span>
 
                 <div className="flex items-center gap-1.5 min-w-0">
                     <HiFolder className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[180px] sm:max-w-xs md:max-w-sm">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[100px] xs:max-w-[140px] sm:max-w-xs md:max-w-sm">
                         {currentProject?.name || "project"}
                     </span>
                 </div>

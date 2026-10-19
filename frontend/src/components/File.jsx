@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { HiOutlinePencil, HiOutlineTrash } from "react-icons/hi2";
+import { HiOutlinePencil, HiOutlineTrash, HiOutlineEllipsisHorizontal } from "react-icons/hi2";
 import { getFileIcon } from "../utils/explorerUtils";
 import { deleteFile, updateFile } from "../features/file";
 
@@ -116,7 +116,7 @@ export default function FileRow({ node, depth, onRefresh, onFileClick, activeFil
                 onContextMenu={openMenu}
                 onClick={() => !renaming && onFileClick?.(node)}
                 style={{ paddingLeft: `${indent + 22}px` }}
-                className={`flex items-center gap-1.5 py-[3px] pr-2 rounded-md cursor-pointer transition-colors duration-100
+                className={`group flex items-center gap-1.5 py-[3px] pr-2 rounded-md cursor-pointer transition-colors duration-100
                     ${isActive
                         ? "bg-white/[0.1] text-white"
                         : "text-gray-400 hover:bg-white/[0.05] hover:text-gray-200"
@@ -141,6 +141,25 @@ export default function FileRow({ node, depth, onRefresh, onFileClick, activeFil
                         <span className="block truncate text-xs font-medium">{node.name}</span>
                     )}
                 </div>
+
+                {!renaming && (
+                    <div
+                        className="flex items-center gap-0.5 ml-auto shrink-0 opacity-0 group-hover:opacity-100 max-md:opacity-70 transition-opacity duration-150"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            title="File options"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setMenu({ x: Math.min(rect.left, window.innerWidth - 160), y: rect.bottom + 4 });
+                            }}
+                            className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/[0.1] transition-colors max-md:block md:hidden"
+                        >
+                            <HiOutlineEllipsisHorizontal className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                )}
             </div>
 
             <AnimatePresence>

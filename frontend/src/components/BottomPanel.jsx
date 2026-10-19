@@ -10,10 +10,11 @@ const MAX_HEIGHT     = 600;
 
 // ─── BottomPanel ──────────────────────────────────────────────────────────────
 // Props:
-//   open      – boolean, controlled from ProjectPage
-//   onClose   – called when × is clicked
-//   projectId – forwarded to Terminal for shell session init
-export default function BottomPanel({ open, onClose, projectId, onTreeChange }) {
+//   open        – boolean, controlled from ProjectPage
+//   onClose     – called when × is clicked
+//   projectId   – forwarded to Terminal for shell session init
+//   fullHeight  – if true, fills parent container (for mobile terminal tab)
+export default function BottomPanel({ open, onClose, projectId, onTreeChange, fullHeight = false }) {
     const [height, setHeight] = useState(DEFAULT_HEIGHT);
 
     const dragging   = useRef(false);
@@ -24,6 +25,7 @@ export default function BottomPanel({ open, onClose, projectId, onTreeChange }) 
 
     // ── drag-to-resize ────────────────────────────────────────────────────────
     const onDragStart = (e) => {
+        if (fullHeight) return;
         dragging.current   = true;
         dragStartY.current = e.clientY;
         dragStartH.current = height;
@@ -59,18 +61,22 @@ export default function BottomPanel({ open, onClose, projectId, onTreeChange }) 
             {open && (
                 <motion.div
                     key="bottom-panel"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height, opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
+                    initial={fullHeight ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                    animate={fullHeight ? { opacity: 1 } : { height, opacity: 1 }}
+                    exit={fullHeight ? { opacity: 0 } : { height: 0, opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="flex flex-col shrink-0 border-t border-white/[0.06] bg-[#111113] overflow-hidden"
+                    className={`flex flex-col border-t border-white/[0.06] bg-[#111113] overflow-hidden ${
+                        fullHeight ? "flex-1 h-full min-h-0" : "shrink-0"
+                    }`}
                 >
                     {/* ── Drag handle ───────────────────────────────────── */}
-                    <div
-                        onMouseDown={onDragStart}
-                        className="h-1 w-full cursor-row-resize bg-transparent hover:bg-blue-500/40 transition-colors shrink-0"
-                        title="Drag to resize"
-                    />
+                    {!fullHeight && (
+                        <div
+                            onMouseDown={onDragStart}
+                            className="h-1 w-full cursor-row-resize bg-transparent hover:bg-blue-500/40 transition-colors shrink-0"
+                            title="Drag to resize"
+                        />
+                    )}
 
                     {/* ── Header ────────────────────────────────────────── */}
                     <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.06] px-3">

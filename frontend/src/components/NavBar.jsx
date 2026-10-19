@@ -4,10 +4,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { toggleTheme } from "../redux/themeSlice";
 import { clearUserData, setUserData } from "../redux/userSlice";
 import { logout as logoutApi } from "../features/logout";
-import { HiMoon, HiSun, HiChevronDown, HiChevronUp, HiBolt } from "react-icons/hi2";
+import { HiMoon, HiSun, HiChevronDown, HiChevronUp, HiBolt, HiBars3, HiXMark } from "react-icons/hi2";
 import { HiArrowRightOnRectangle } from "react-icons/hi2";
 
-export default function NavBar() {
+export default function NavBar({ onToggleSidebar, isSidebarOpen }) {
     const dispatch = useDispatch();
     const { isDark } = useSelector((state) => state.theme);
     const { userData } = useSelector((state) => state.user);
@@ -53,21 +53,34 @@ export default function NavBar() {
     const initials = getInitials(userData?.name);
 
     return (
-        <nav className="flex items-center justify-between px-7 py-3.5 border-b border-black/[0.06] dark:border-white/[0.08] backdrop-blur-md bg-white/70 dark:bg-[#07070c]/70 sticky top-0 z-50 transition-colors duration-300">
-            {/* Logo */}
-            <div className="flex items-center gap-2 select-none">
+        <nav className="flex items-center justify-between px-4 sm:px-7 py-2.5 sm:py-3.5 border-b border-black/[0.06] dark:border-white/[0.08] backdrop-blur-md bg-white/70 dark:bg-[#07070c]/70 sticky top-0 z-50 transition-colors duration-300">
+            {/* Left section: Optional mobile menu toggle + Logo */}
+            <div className="flex items-center gap-2.5 select-none">
+                {onToggleSidebar && (
+                    <button
+                        onClick={onToggleSidebar}
+                        aria-label="Toggle navigation menu"
+                        className="md:hidden p-1.5 -ml-1 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+                    >
+                        {isSidebarOpen ? (
+                            <HiXMark className="w-5 h-5" />
+                        ) : (
+                            <HiBars3 className="w-5 h-5" />
+                        )}
+                    </button>
+                )}
                 <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
                     Codo
                 </span>
             </div>
 
             {/* Right section: credits + theme toggle + user profile */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
                 {/* Credits badge */}
                 {userData && (
                     <Link
                         to="/plans"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/20 text-xs font-semibold transition-all shadow-xs"
+                        className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/20 text-xs font-semibold transition-all shadow-xs"
                         title="AI Credits - Click to upgrade plan"
                     >
                         <HiBolt className="w-3.5 h-3.5 text-amber-500" />
@@ -116,7 +129,7 @@ export default function NavBar() {
 
                         {/* Dropdown Card */}
                         {dropdownOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-white dark:bg-[#111116] border border-gray-200 dark:border-white/[0.08] shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                            <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl bg-white dark:bg-[#111116] border border-gray-200 dark:border-white/[0.08] shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
                                 {/* User Info Header */}
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-white text-black font-semibold text-sm flex items-center justify-center shrink-0 shadow-sm border border-gray-200 dark:border-white/20 select-none">

@@ -11,7 +11,7 @@ import Editor from "../components/Editor.jsx";
 import Preview from "../components/Preview.jsx";
 import BottomPanel from "../components/BottomPanel.jsx";
 import AIChat from "../components/AIChat.jsx";
-import { HiOutlineDocumentDuplicate } from "react-icons/hi2";
+import { HiOutlineDocumentDuplicate, HiOutlineEye } from "react-icons/hi2";
 import { PiRobotLight } from "react-icons/pi";
 import { LuSquareTerminal, LuCode } from "react-icons/lu";
 
@@ -25,25 +25,26 @@ const ACTIVITY_ITEMS = [
 const MOBILE_TABS = [
     { id: "explorer", icon: HiOutlineDocumentDuplicate, label: "Files" },
     { id: "editor",   icon: LuCode,                    label: "Editor" },
-    { id: "ai",       icon: PiRobotLight,               label: "AI" },
-    { id: "terminal", icon: LuSquareTerminal,           label: "Terminal" },
+    { id: "preview",  icon: HiOutlineEye,              label: "Preview" },
+    { id: "ai",       icon: PiRobotLight,              label: "AI" },
+    { id: "terminal", icon: LuSquareTerminal,          label: "Terminal" },
 ];
 
 // ─── mobile bottom tab bar ─────────────────────────────────────────────────────
 function MobileTabBar({ activePane, onSelect }) {
     return (
-        <nav className="relative flex shrink-0 border-t border-white/[0.06] bg-[#0d0d14]">
+        <nav className="relative flex shrink-0 border-t border-white/[0.06] bg-[#0d0d14] pb-[max(0.25rem,env(safe-area-inset-bottom))]">
             {MOBILE_TABS.map(({ id, icon: Icon, label }) => {
                 const active = activePane === id;
                 return (
                     <button
                         key={id}
                         onClick={() => onSelect(id)}
-                        className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors
+                        className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 sm:py-2 text-[10px] font-medium transition-colors
                             ${active ? "text-blue-400" : "text-gray-500 hover:text-gray-300"}`}
                     >
-                        <Icon className="w-5 h-5" />
-                        {label}
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                        <span className="truncate">{label}</span>
                         {active && (
                             <motion.div
                                 layoutId="mobile-active-bar"
@@ -200,7 +201,14 @@ export default function ProjectPage() {
             <div className="pointer-events-none absolute -top-20 right-1/4 h-80 w-80 rounded-full bg-violet-500/10 blur-[140px]" />
 
             {/* TopBar */}
-            <TopBar activeView={view} setActiveView={setView} />
+            <TopBar
+                activeView={view}
+                setActiveView={(v) => {
+                    setView(v);
+                    if (v === "preview") setMobilePane("preview");
+                    if (v === "code") setMobilePane("editor");
+                }}
+            />
 
             {/* ── Desktop layout (md+) ─────────────────────────────────────── */}
             <div className="hidden md:flex flex-1 flex-col overflow-hidden">
@@ -216,14 +224,26 @@ export default function ProjectPage() {
                             return;
                         }
                         if (panelId === "ai") {
-                            setAiChatOpen((o) => !o);
+                            setAiChatOpen((o) => {
+                                const next = !o;
+                                if (next && typeof window !== "undefined" && window.innerWidth < 1100) {
+                                    setActivePanel(null);
+                                }
+                                return next;
+                            });
                             return;
                         }
-                        setActivePanel((prev) => (prev === panelId ? null : panelId));
+                        setActivePanel((prev) => {
+                            const next = prev === panelId ? null : panelId;
+                            if (next && typeof window !== "undefined" && window.innerWidth < 1100 && aiChatOpen) {
+                                setAiChatOpen(false);
+                            }
+                            return next;
+                        });
                     }}
                 />
 
-                {/* Side panel — Explorer only now */}
+                {/* Side panel — Explorer */}
                 <AnimatePresence mode="wait">
                     {activePanel === "explorer" && (
                         <Explorer key="explorer" {...explorerProps} />
@@ -314,6 +334,18 @@ export default function ProjectPage() {
                                 <Editor {...editorProps} />
                             </motion.div>
                         )}
+                        {mobilePane === "preview" && (
+                            <motion.div
+                                key="preview"
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.98 }}
+                                transition={{ duration: 0.18 }}
+                                className="flex flex-1 overflow-hidden"
+                            >
+                                <Preview {...previewProps} />
+                            </motion.div>
+                        )}
                         {mobilePane === "explorer" && (
                             <motion.div
                                 key="explorer"
@@ -345,6 +377,7 @@ export default function ProjectPage() {
                             <motion.div key="terminal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-1 flex-col overflow-hidden bg-[#111113]">
                                 <BottomPanel
                                     open={true}
+                                    fullHeight={true}
                                     onClose={() => setMobilePane("editor")}
                                     projectId={id}
                                     onTreeChange={() => setTreeTick((n) => n + 1)}
@@ -354,7 +387,14 @@ export default function ProjectPage() {
                     </AnimatePresence>
                 </div>
 
-                <MobileTabBar activePane={mobilePane} onSelect={setMobilePane} />
+                <MobileTabBar
+                    activePane={mobilePane}
+                    onSelect={(pane) => {
+                        setMobilePane(pane);
+                        if (pane === "preview") setView("preview");
+                        if (pane === "editor") setView("code");
+                    }}
+                />
             </div>
         </div>
     );

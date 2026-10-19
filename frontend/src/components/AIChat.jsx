@@ -431,7 +431,7 @@ export default function AIChat({
             </div>
 
             {/* ── Input ──────────────────────────────────────────────── */}
-            <div className="shrink-0 border-t border-white/[0.08] bg-[#0a0a0d] px-3 py-2">
+            <div className="shrink-0 border-t border-white/[0.08] bg-[#0a0a0d] px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
                 <div className="flex items-end gap-2">
                     <textarea
                         ref={inputRef}
@@ -444,7 +444,7 @@ export default function AIChat({
                         }}
                         onKeyDown={handleKeyDown}
                         placeholder="Ask AI to build something..."
-                        className="flex-1 resize-none bg-transparent text-xs text-gray-200 placeholder-gray-600 outline-none leading-5 scrollbar-none"
+                        className="flex-1 resize-none bg-transparent text-base sm:text-xs text-gray-200 placeholder-gray-600 outline-none leading-5 scrollbar-none"
                         style={{ minHeight: "20px", maxHeight: "96px" }}
                     />
                     <button
