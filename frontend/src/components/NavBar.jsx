@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleTheme } from "../redux/themeSlice";
 import { clearUserData, setUserData } from "../redux/userSlice";
 import { logout as logoutApi } from "../features/logout";
-import { HiMoon, HiSun, HiChevronDown, HiChevronUp } from "react-icons/hi2";
+import { HiMoon, HiSun, HiChevronDown, HiChevronUp, HiBolt } from "react-icons/hi2";
 import { HiArrowRightOnRectangle } from "react-icons/hi2";
 
 export default function NavBar() {
@@ -60,13 +61,26 @@ export default function NavBar() {
                 </span>
             </div>
 
-            {/* Right section: theme toggle + user profile */}
-            <div className="flex items-center gap-5">
+            {/* Right section: credits + theme toggle + user profile */}
+            <div className="flex items-center gap-4">
+                {/* Credits badge */}
+                {userData && (
+                    <Link
+                        to="/plans"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-500/10 hover:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/20 text-xs font-semibold transition-all shadow-xs"
+                        title="AI Credits - Click to upgrade plan"
+                    >
+                        <HiBolt className="w-3.5 h-3.5 text-amber-500" />
+                        <span>{userData?.credits ?? 100}</span>
+                        <span className="hidden sm:inline font-normal text-violet-600/80 dark:text-violet-300/80">credits</span>
+                    </Link>
+                )}
+
                 {/* Theme toggle */}
                 <button
                     onClick={() => dispatch(toggleTheme())}
                     aria-label="Toggle dark mode"
-                    className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200"
+                    className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-200 cursor-pointer"
                 >
                     {isDark ? (
                         <HiSun className="w-5 h-5 text-amber-400" />
@@ -80,7 +94,7 @@ export default function NavBar() {
                     <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={() => setDropdownOpen((prev) => !prev)}
-                            className="flex items-center gap-2.5 p-1 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors focus:outline-none"
+                            className="flex items-center gap-2.5 p-1 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors focus:outline-none cursor-pointer"
                         >
                             {/* Avatar Badge */}
                             <div className="w-8 h-8 rounded-full bg-white text-black font-semibold text-xs flex items-center justify-center shadow-sm border border-gray-200 dark:border-white/20 select-none">
@@ -88,7 +102,7 @@ export default function NavBar() {
                             </div>
 
                             {/* User Name */}
-                            <span className="text-sm font-medium text-gray-800 dark:text-white select-none">
+                            <span className="text-sm font-medium text-gray-800 dark:text-white select-none hidden sm:inline">
                                 {userData?.name || "User"}
                             </span>
 
@@ -116,6 +130,24 @@ export default function NavBar() {
                                             {userData?.email || ""}
                                         </p>
                                     </div>
+                                </div>
+
+                                {/* Plan / Credits box */}
+                                <div className="mt-3 p-2.5 rounded-xl bg-violet-500/5 dark:bg-white/[0.03] border border-violet-500/10 dark:border-white/[0.06] flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <span className="text-[11px] text-gray-500 dark:text-gray-400">Available Credits</span>
+                                        <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1">
+                                            <HiBolt className="w-3.5 h-3.5 text-amber-500" />
+                                            {userData?.credits ?? 100}
+                                        </span>
+                                    </div>
+                                    <Link
+                                        to="/plans"
+                                        onClick={() => setDropdownOpen(false)}
+                                        className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors"
+                                    >
+                                        Upgrade
+                                    </Link>
                                 </div>
 
                                 {/* Divider */}

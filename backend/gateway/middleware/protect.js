@@ -18,6 +18,9 @@ export const protect=async (req,res,next)=>{
         }
         
         const data=JSON.parse(result)
+        if (data && data.credits == null) {
+            data.credits = 100;
+        }
 
         //data added to request so that it can be called in controller
         req.user=data

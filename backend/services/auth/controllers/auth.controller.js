@@ -20,7 +20,11 @@ export const login =async (req,res)=>{
                 name:decoded.name,
                 email:decoded.email,
                 avatar:decoded.picture,  
+                credits: 100, // free 100 credits on first sign in
             })
+        } else if (user.credits == null) {
+            user.credits = 100;
+            await user.save();
         }
 
         //storing session in redis
@@ -33,7 +37,7 @@ export const login =async (req,res)=>{
             _id:user._id,
             email:user.email,
             avatar:user.avatar,
-            credits:user.credits
+            credits: user.credits ?? 100
         }),
         "EX",7*24*60*60)
 
@@ -71,80 +75,98 @@ export const logout=async (req,res)=>{
     }
 }
 
-export const deductCredits=async ((req,res)=>{
+export const deductCredits=async (req,res)=>{
     try{
         const {userId,amount}=req.body;
         if(!userId){
             return res.status(401).json({message:"userId not found"});
         }
 
-        const user=await User.findOneAndUpdate({_id:userId,credits:{$gte:amount}},{
-            $inc:{credits:-amount}
-        },{returnDocument:"after"}).select("credits")
+        const deductAmount = typeof amount === "number" && amount > 0 ? amount : 10;
 
-        if(!user){
-            return res.status(401).json({message:"Insufficient credits"})
+        // Verify user and auto-initialize credits if missing
+        let user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
         }
 
-        const sessionId=await redis.get(`user-id-${userId}`)
+        if (user.credits == null || isNaN(user.credits)) {
+            user.credits = 100;
+            await User.findByIdAndUpdate(userId, { credits: 100 });
+        }
 
-        await redis.set(`session-${sessionId}`,JSON.stringify({
-            name:user.name,
-            _id:user._id,
-            email:user.email,
-            avatar:user.avatar,
-            credits:user.credits
-        }),
-        "EX",7*24*60*60)
+        if (user.credits < deductAmount) {
+            return res.status(401).json({ message: "Insufficient credits", credits: user.credits });
+        }
 
-        return res.status(200).json({credits:user.credits})
+        user = await User.findByIdAndUpdate(
+            userId,
+            { $inc: { credits: -deductAmount } },
+            { new: true }
+        );
 
+        const sessionId = (await redis.get(`user-session-${userId}`)) || (await redis.get(`user-id-${userId}`));
 
+        if (sessionId) {
+            await redis.set(
+                `session-${sessionId}`,
+                JSON.stringify({
+                    name: user.name,
+                    _id: user._id,
+                    email: user.email || "",
+                    avatar: user.avatar || "",
+                    credits: user.credits
+                }),
+                "EX",
+                7 * 24 * 60 * 60
+            );
+        }
 
-
+        return res.status(200).json({ credits: user.credits });
     }catch(error){
         console.log("deduct credits error:", error);
-        return res.status(500).json({message: `deduct credits error ${error}`})
-
+        return res.status(500).json({message: `deduct credits error ${error}`});
     }
+}
 
-})
-export const addCredits=async ((req,res)=>{
+export const addCredits=async (req,res)=>{
     try{
         const {userId,amount}=req.body;
         if(!userId){
             return res.status(401).json({message:"userId not found"});
         }
 
-        const user = await User.findById(userId)
+        const creditAmount = typeof amount === "number" && amount > 0 ? amount : 10;
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $inc: { credits: creditAmount } },
+            { new: true }
+        );
 
         if(!user){
-            return res.status(404).json({message:"User not found"})
+            return res.status(404).json({message:"User not found"});
         }
 
-        user.credits=(user.credits||0)+amount
+        const sessionId = (await redis.get(`user-session-${userId}`)) || (await redis.get(`user-id-${userId}`));
 
-        await user.save()
+        if (sessionId) {
+            await redis.set(
+                `session-${sessionId}`,
+                JSON.stringify({
+                    name: user.name,
+                    _id: user._id,
+                    email: user.email || "",
+                    avatar: user.avatar || "",
+                    credits: user.credits
+                }),
+                "EX",
+                7 * 24 * 60 * 60
+            );
+        }
 
-
-
-        const sessionId=await redis.get(`user-id-${userId}`)
-
-        await redis.set(`session-${sessionId}`,JSON.stringify({
-            name:user.name,
-            _id:user._id,
-            email:user.email,
-            avatar:user.avatar,
-            credits:user.credits
-        }),
-
-        "EX",7*24*60*60)
-
-        return res.status(200).json(user.credits)
+        return res.status(200).json({ credits: user.credits });
     }catch(error){
-        console.log("deduct credits error:", error);
-        return res.status(500).json({message: `deduct credits error ${error}`})
-
+        console.log("add credits error:", error);
+        return res.status(500).json({message: `add credits error ${error}`});
     }
-
-})
+}

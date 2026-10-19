@@ -2,21 +2,55 @@ import crypto from "crypto";
 import razorpay from "../config/razorpay.js";
 import Payment from "../models/payment.model.js";
 
-// Defined subscription/credit plans
+// Defined subscription/credit plans matching frontend UI
 export const PLANS = {
+  free: {
+    name: "Free",
+    planId: "free",
+    amount: 0, // ₹0
+    credits: 100,
+    description: "For trying out the VertexAI IDE.",
+    features: [
+      "100 AI credits",
+      "AI code generation",
+      "Project editor",
+      "HTML / CSS / JS preview",
+      "React preview",
+      "Basic project management",
+    ],
+  },
   pro: {
-    name: "Pro Plan",
+    name: "Pro",
     planId: "pro",
-    amount: 499, // In INR (₹499)
+    amount: 299, // ₹299
     credits: 500,
-    description: "500 AI credits with priority processing",
+    description: "For developers who build regularly.",
+    popular: true,
+    features: [
+      "500 AI credits",
+      "Everything in Free",
+      "Priority AI generation",
+      "Larger projects",
+      "Unlimited projects",
+      "Advanced AI coding",
+      "Priority support",
+    ],
   },
   team: {
-    name: "Team Plan",
+    name: "Team",
     planId: "team",
-    amount: 999, // In INR (₹999)
-    credits: 1200,
-    description: "1200 AI credits for power users and teams",
+    amount: 799, // ₹799
+    credits: 2000,
+    description: "For teams building products together.",
+    features: [
+      "2,000 AI credits",
+      "Everything in Pro",
+      "Team collaboration",
+      "Shared projects",
+      "Higher AI limits",
+      "Priority processing",
+      "Team support",
+    ],
   },
 };
 
@@ -41,7 +75,8 @@ export const getPlans = async (req, res) => {
 
 /**
  * POST /create-order
- * Create a new Razorpay order and save the pending payment record
+ * Create a new Razorpay order and save the pending payment record.
+ * Gracefully flags workInProgress if Razorpay credentials are not configured in .env.
  */
 export const createOrder = async (req, res) => {
   try {
@@ -55,14 +90,29 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    if (!plan || !PLANS[plan]) {
+    if (!plan || !PLANS[plan] || plan === "free") {
       return res.status(400).json({
         success: false,
-        message: "Invalid plan. Available plans are 'pro' and 'team'.",
+        message: "Invalid plan. Available paid plans are 'pro' and 'team'.",
       });
     }
 
     const selectedPlan = PLANS[plan];
+
+    // Check if Razorpay keys are configured
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    const isWip = !keyId || !keySecret || keyId.trim() === "" || keyId.includes("your_");
+
+    if (isWip) {
+      return res.status(200).json({
+        success: false,
+        workInProgress: true,
+        message: "Razorpay payment gateway is currently in Work-In-Progress mode. Keys are not configured in environment.",
+        plan: selectedPlan,
+      });
+    }
+
     // Razorpay accepts amount in the smallest currency sub-unit (paise for INR: 1 INR = 100 paise)
     const amountInPaise = selectedPlan.amount * 100;
     const receipt = `rcpt_${Date.now()}_${String(userId).slice(-6)}`;
@@ -107,6 +157,62 @@ export const createOrder = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: `Failed to create Razorpay order: ${error.message}`,
+    });
+  }
+};
+
+/**
+ * POST /test-upgrade
+ * Allows adding credits directly in test / WIP mode without live Razorpay keys
+ */
+export const testUpgrade = async (req, res) => {
+  try {
+    const userId = req.headers["x-user-id"] || req.body.userId;
+    const { plan } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User ID is required",
+      });
+    }
+
+    if (!plan || !PLANS[plan] || plan === "free") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid plan. Choose 'pro' or 'team'.",
+      });
+    }
+
+    const selectedPlan = PLANS[plan];
+    const authServiceUrl = process.env.AUTH_SERVICE_URL || "http://localhost:8001";
+    const authResponse = await fetch(`${authServiceUrl}/user/add-credits`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: String(userId),
+        amount: selectedPlan.credits,
+      }),
+    });
+
+    let updatedCredits = null;
+    if (authResponse.ok) {
+      const data = await authResponse.json();
+      updatedCredits = data?.credits ?? (typeof data === "number" ? data : null);
+    }
+
+    return res.status(200).json({
+      success: true,
+      workInProgress: true,
+      message: `Test Upgrade: Added ${selectedPlan.credits} credits to your account!`,
+      plan: selectedPlan.planId,
+      credits: updatedCredits,
+    });
+  } catch (err) {
+    console.error("Error in testUpgrade:", err);
+    return res.status(500).json({
+      success: false,
+      message: `Test upgrade failed: ${err.message}`,
     });
   }
 };

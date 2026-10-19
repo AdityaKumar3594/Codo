@@ -1,5 +1,6 @@
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { buildGraph } from "../graph/graph.js";
+import { deductCredits } from "../utils/deductCredits.js";
 
 const buildHistory = (history) => {
     if (!Array.isArray(history)) return [];
@@ -64,6 +65,16 @@ export const chat = async (req, res) => {
             return res.status(400).json({ message: "message is required" });
         }
 
+        // Deduct 10 credits per AI prompt as specified
+        const creditResult = await deductCredits({ userId, amount: 10 });
+        if (!creditResult.success) {
+            return res.status(creditResult.status === 401 ? 402 : (creditResult.status || 400)).json({
+                message: creditResult.message || "Insufficient AI credits. Please upgrade your plan to continue.",
+                insufficientCredits: true,
+                credits: creditResult.credits ?? 0,
+            });
+        }
+
         res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
         res.setHeader("Cache-Control", "no-cache, no-transform");
         res.setHeader("Connection", "keep-alive");
@@ -81,6 +92,7 @@ export const chat = async (req, res) => {
         sendEvent(res, "start", {
             success: true,
             message: "AI started",
+            credits: creditResult.credits,
         });
 
         const graph = buildGraph({ projectId, userId });
@@ -143,6 +155,7 @@ export const chat = async (req, res) => {
             sendEvent(res, "done", {
                 success: true,
                 message: finalMessage,
+                credits: creditResult.credits,
             });
             res.end();
         }

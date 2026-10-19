@@ -15,8 +15,13 @@ const userSlice = createSlice({
             state.userData = null;
             state.loading  = false;
         },
+        updateUserCredits: (state, action) => {
+            if (state.userData) {
+                state.userData.credits = action.payload;
+            }
+        },
     },
 });
 
-export const { setUserData, clearUserData } = userSlice.actions;
+export const { setUserData, clearUserData, updateUserCredits } = userSlice.actions;
 export default userSlice.reducer;

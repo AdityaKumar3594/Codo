@@ -1,7 +1,12 @@
 import { motion } from "motion/react";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { HiOutlineFolder, HiOutlineStar, HiBolt } from "react-icons/hi2";
 
 export default function Sidebar({ activeTab, setActiveTab }) {
+    const navigate = useNavigate();
+    const { userData } = useSelector((state) => state.user);
+
     const navItems = [
         {
             id: "projects",
@@ -48,16 +53,25 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                 transition={{ duration: 0.3 }}
                 className="rounded-2xl p-4 bg-white/60 dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex flex-col gap-2"
             >
-                <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                        Upgrade Plan
-                    </span>
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Upgrade Plan
+                        </span>
+                        {userData && (
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 flex items-center gap-1">
+                                <HiBolt className="w-3 h-3 text-amber-500" />
+                                {userData.credits ?? 100}
+                            </span>
+                        )}
+                    </div>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                         Upgrade to Pro for more credits
                     </span>
                 </div>
 
                 <motion.button
+                    onClick={() => navigate("/plans")}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
                     className="mt-1 w-full bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 transition-colors py-2.5 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"

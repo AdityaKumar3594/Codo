@@ -5,12 +5,14 @@ import {
   verifyPayment,
   getPaymentHistory,
   handleWebhook,
+  testUpgrade,
 } from "../controllers/payment.controller.js";
 
 const router = express.Router();
 
 router.get("/plans", getPlans);
 router.post("/create-order", createOrder);
+router.post("/test-upgrade", testUpgrade);
 router.post("/verify", verifyPayment);
 router.get("/history", getPaymentHistory);
 router.post("/webhook", handleWebhook);
