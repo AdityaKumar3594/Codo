@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import ProjectPage from "./pages/ProjectPage";
 import Plan from "./pages/Plan";
+import LandingPage from "./pages/LandingPage";
 import { useDispatch, useSelector } from "react-redux";
 import { setUserData } from "./redux/userSlice";
 import { me } from "./features/me";
@@ -38,6 +39,7 @@ function App() {
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/landing" element={<LandingPage />} />
                 <Route path="/plans" element={<Plan />} />
                 <Route path="/plan" element={<Plan />} />
                 <Route
