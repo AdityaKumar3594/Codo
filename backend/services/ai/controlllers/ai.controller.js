@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { buildGraph } from "../graph/graph.js";
-import { deductCredits } from "../utils/deductCredits.js";
+import { deductCredits, refundCredits } from "../utils/deductCredits.js";
 
 const buildHistory = (history) => {
     if (!Array.isArray(history)) return [];
@@ -19,11 +20,11 @@ const sendEvent = (res, type, data) => {
     if (res.writableEnded || res.destroyed) return false;
 
     try {
-        res.write(`event:${type}\n`);
-        res.write(`data:${JSON.stringify(data)}\n\n`);
+        res.write(`event: ${type}\n`);
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
         return true;
     } catch (error) {
-        console.error(`SSE Error ${error}`);
+        console.error(`SSE write error: ${error?.message || error}`);
         return false;
     }
 };
@@ -50,10 +51,24 @@ const parseToolContent = (content) => {
 export const chat = async (req, res) => {
     let disconnected = false;
     let sseStarted = false;
+    let heartbeat = null;
+    let hasDeliveredOutput = false;
+    let userId = null;
+    let requestId = null;
+    let startedAt = Date.now();
+
+    const log = (event, extra = {}) => {
+        console.log(JSON.stringify({
+            requestId,
+            event,
+            elapsedMs: Date.now() - startedAt,
+            ...extra,
+        }));
+    };
 
     try {
         const { projectId, message, history = [] } = req.body;
-        const userId = req.headers["x-user-id"];
+        userId = req.headers["x-user-id"];
 
         if (!projectId) {
             return res.status(400).json({ message: "projectId is required" });
@@ -64,6 +79,14 @@ export const chat = async (req, res) => {
         if (!message || typeof message !== "string" || !message.trim()) {
             return res.status(400).json({ message: "message is required" });
         }
+
+        requestId = randomUUID();
+        startedAt = Date.now();
+
+        log("CHAT_REQUEST_RECEIVED", {
+            projectId,
+            userId,
+        });
 
         // Deduct 10 credits per AI prompt as specified
         const creditResult = await deductCredits({ userId, amount: 10 });
@@ -83,11 +106,28 @@ export const chat = async (req, res) => {
         sseStarted = true;
 
         const abortController = new AbortController();
+
+        // Response close handler: log lifecycle and detect premature client disconnect
         res.once("close", () => {
-            disconnected = true;
-            abortController.abort();
-            console.log("AI CLIENT DISCONNECTED");
+            log("RESPONSE_CLOSE", {
+                writableFinished: res.writableFinished,
+                writableEnded: res.writableEnded,
+                destroyed: res.destroyed,
+            });
+
+            if (!res.writableFinished) {
+                disconnected = true;
+                abortController.abort();
+                log("CLIENT_DISCONNECTED_BEFORE_FINISH");
+            }
         });
+
+        // Keep-alive heartbeat: prevent CloudFront/ALB idle stream reset (~60s) during long-running tool calls
+        heartbeat = setInterval(() => {
+            if (!disconnected && !res.destroyed && !res.writableEnded) {
+                res.write(": ping\n\n");
+            }
+        }, 15000);
 
         sendEvent(res, "start", {
             success: true,
@@ -99,6 +139,8 @@ export const chat = async (req, res) => {
         const messages = buildHistory(history);
         messages.push(new HumanMessage(message.trim()));
 
+        log("GRAPH_STREAM_STARTING");
+
         const stream = await graph.stream(
             { messages },
             {
@@ -108,9 +150,19 @@ export const chat = async (req, res) => {
             }
         );
 
+        log("GRAPH_STREAM_CREATED");
+
+        let chunkCount = 0;
         let finalMessage = "";
 
         for await (const chunk of stream) {
+            chunkCount++;
+
+            log("GRAPH_CHUNK_RECEIVED", {
+                chunkCount,
+                nodeNames: Object.keys(chunk ?? {}),
+            });
+
             if (disconnected || res.writableEnded) break;
 
             if (chunk?.agent) {
@@ -120,6 +172,7 @@ export const chat = async (req, res) => {
 
                 const toolCalls = last.tool_calls || [];
                 if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+                    hasDeliveredOutput = true;
                     for (const call of toolCalls) {
                         sendEvent(res, "tool_start", {
                             tool_name: call.name,
@@ -131,6 +184,7 @@ export const chat = async (req, res) => {
 
                 const content = extractText(last.content);
                 if (content) {
+                    hasDeliveredOutput = true;
                     finalMessage = content;
                     sendEvent(res, "message", { content: finalMessage });
                 }
@@ -139,6 +193,7 @@ export const chat = async (req, res) => {
             if (chunk?.tools) {
                 const toolMessages = chunk.tools?.messages || [];
                 for (const toolMessage of toolMessages) {
+                    hasDeliveredOutput = true;
                     const result = parseToolContent(toolMessage.content);
 
                     if (result && typeof result === "object" && result.operation) {
@@ -151,6 +206,8 @@ export const chat = async (req, res) => {
             }
         }
 
+        log("GRAPH_STREAM_FINISHED", { chunkCount });
+
         if (!disconnected && !res.writableEnded) {
             sendEvent(res, "done", {
                 success: true,
@@ -160,17 +217,30 @@ export const chat = async (req, res) => {
             res.end();
         }
     } catch (error) {
-        if (error?.name === "AbortError") return;
+        if (error?.name === "AbortError" || disconnected) {
+            log("AI_STREAM_ABORTED", { message: error?.message });
+            return;
+        }
 
-        console.log("AI STREAM ERROR:", error.message);
-        if (disconnected) return;
+        log("AI_STREAM_ERROR", { message: error?.message || String(error) });
+
+        // Refund credits if request failed prematurely before delivering any output
+        if (!hasDeliveredOutput && userId) {
+            try {
+                await refundCredits(userId, 10);
+            } catch (refundErr) {
+                console.error("Failed to refund credits:", refundErr?.message || refundErr);
+            }
+        }
 
         if (sseStarted || res.headersSent) {
             sendEvent(res, "error", {
                 success: false,
                 message: error?.message || "AI request failed",
             });
-            if (!res.writableEnded) res.end();
+            if (!res.writableEnded && !res.destroyed) {
+                res.end();
+            }
             return;
         }
 
@@ -178,5 +248,10 @@ export const chat = async (req, res) => {
             success: false,
             message: error?.message || "AI request failed",
         });
+    } finally {
+        if (heartbeat) {
+            clearInterval(heartbeat);
+            heartbeat = null;
+        }
     }
 };

@@ -87,4 +87,23 @@ export const deductCredits = async (userOrOptions, maybeAmount = 1) => {
     }
 };
 
+/**
+ * Refunds credits for a user if an AI request fails fatally before generation.
+ *
+ * @param {string} userId - User ID
+ * @param {number} [amount=10] - Credit amount to refund
+ */
+export const refundCredits = async (userId, amount = 10) => {
+    if (!userId) return;
+    try {
+        await authAPI.post("/user/add-credits", {
+            userId: String(userId),
+            amount: Number(amount),
+        });
+        console.log(`Refunded ${amount} credits to user ${userId}`);
+    } catch (error) {
+        console.error("refundCredits error:", errMsg(error));
+    }
+};
+
 export default deductCredits;
