@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import proxy from "express-http-proxy";
 import httpProxy  from "http-proxy";
+import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware";
 import { protect } from "./middleware/protect.js";
 import { getCurrentUser } from "./controllers/user.controller.js";
 import { proxyWithHeader } from "./utils/proxyWithHeader.js";
@@ -42,7 +43,23 @@ app.use("/api/file",    protect, proxyWithHeader(process.env.FILE_SERVICE_URL ||
 app.use("/api/payment/webhook", proxy(process.env.PAYMENT_SERVICE_URL || "http://localhost:8006"));
 app.use("/api/payment/plans",   proxy(process.env.PAYMENT_SERVICE_URL || "http://localhost:8006"));
 app.use("/api/payment",         protect, proxyWithHeader(process.env.PAYMENT_SERVICE_URL  || "http://localhost:8006"));
-app.use("/api/ai",              protect, proxyWithHeader(process.env.AI_SERVICE_URL  || "http://localhost:8004"));
+app.use(
+    "/api/ai",
+    protect,
+    createProxyMiddleware({
+        target: process.env.AI_SERVICE_URL || "http://localhost:8004",
+        changeOrigin: true,
+        pathRewrite: { "^/api/ai": "" },
+        proxyTimeout: 0,
+        timeout: 0,
+        on: {
+            proxyReq: (proxyReq, req) => {
+                if (req.user) proxyReq.setHeader("x-user-id", String(req.user._id));
+                fixRequestBody(proxyReq, req);
+            },
+        },
+    })
+);
 app.use("/api/terminal",        protect, proxy(process.env.TERMINAL_SERVICE_URL || "http://localhost:8005"));
 app.get("/api/me",              protect, getCurrentUser);
 

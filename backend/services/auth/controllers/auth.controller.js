@@ -104,7 +104,7 @@ export const deductCredits=async (req,res)=>{
         user = await User.findByIdAndUpdate(
             userId,
             { $inc: { credits: -deductAmount } },
-            { new: true }
+            { returnDocument: "after" }
         );
 
         const sessionId = (await redis.get(`user-session-${userId}`)) || (await redis.get(`user-id-${userId}`));
@@ -142,7 +142,7 @@ export const addCredits=async (req,res)=>{
         const user = await User.findByIdAndUpdate(
             userId,
             { $inc: { credits: creditAmount } },
-            { new: true }
+            { returnDocument: "after" }
         );
 
         if(!user){

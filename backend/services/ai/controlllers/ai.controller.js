@@ -122,12 +122,15 @@ export const chat = async (req, res) => {
             }
         });
 
-        // Keep-alive heartbeat: prevent CloudFront/ALB idle stream reset (~60s) during long-running tool calls
+        // Keep-alive heartbeat: prevent CloudFront/ALB idle stream reset during long-running tool calls
         heartbeat = setInterval(() => {
             if (!disconnected && !res.destroyed && !res.writableEnded) {
                 res.write(": ping\n\n");
+                log("SSE_HEARTBEAT", {
+                    elapsedMs: Date.now() - startedAt,
+                });
             }
-        }, 15000);
+        }, 5000);
 
         sendEvent(res, "start", {
             success: true,

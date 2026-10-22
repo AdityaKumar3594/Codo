@@ -161,7 +161,10 @@ export default function AIChat({
 
     useEffect(() => {
         setTimeout(() => inputRef.current?.focus(), 150);
-        return () => abortRef.current?.abort();
+        return () => {
+            console.log("[AI CHAT] Component unmounted");
+            abortRef.current?.abort();
+        };
     }, []);
 
     // Helper: append an op badge to a specific assistant message
@@ -210,6 +213,13 @@ export default function AIChat({
         abortRef.current?.abort();
         const controller = new AbortController();
         abortRef.current = controller;
+
+        controller.signal.addEventListener("abort", () => {
+            console.error("[AI CHAT] Request aborted by frontend", {
+                time: new Date().toISOString(),
+                projectId,
+            });
+        });
 
         let assistantText = "";
         let sawFileOp = false;

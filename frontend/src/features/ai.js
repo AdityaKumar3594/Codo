@@ -50,6 +50,8 @@ export const streamChat = async ({
     const decoder = new TextDecoder();
     let buffer = "";
 
+    let receivedDone = false;
+
     const flushEvent = (eventText) => {
         if (!eventText.trim()) return;
 
@@ -72,6 +74,10 @@ export const streamChat = async ({
             data = JSON.parse(dataText);
         } catch {
             data = dataText;
+        }
+
+        if (eventType === "done") {
+            receivedDone = true;
         }
 
         onEvent?.(eventType, data);
